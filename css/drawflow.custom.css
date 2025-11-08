@@ -78,6 +78,45 @@
     flex-shrink: 0;
 }
 
+/* 折叠/展开按钮样式 */
+.drawflow-node-header .btn-collapse {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    margin-left: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.25);
+    color: #ffffff;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.drawflow-node-header .btn-collapse:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: translateZ(0) scale(1.05);
+    transition: all 0.15s ease;
+}
+
+.drawflow-node-header .btn-collapse:active {
+    transform: translateZ(0) scale(0.96);
+}
+
+.drawflow-node-header .btn-collapse:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.35);
+    border-color: #4a90e2;
+}
+
 /* Node Status Colors */
 .node-status.status-0 {
     background-color: #808080;

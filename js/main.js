@@ -50,6 +50,16 @@ function initializeApplication() {
  * Setup all UI event handlers
  */
 function setupUIHandlers() {
+  // Toolbar buttons for collapsing and expanding all nodes
+  document.getElementById("btn-collapse-all")?.addEventListener("click", () => {
+    collapseAllNodes();
+    showMessage("已折叠所有子树");
+  });
+
+  document.getElementById("btn-expand-all")?.addEventListener("click", () => {
+    expandAllNodes();
+    showMessage("已展开所有子树");
+  });
   // Header buttons
   document.getElementById("btn-clear")?.addEventListener("click", handleClear);
   document
@@ -678,6 +688,32 @@ function downloadFile(filename, content) {
 }
 
 /**
+ * Collapse all nodes in the editor
+ */
+function collapseAllNodes() {
+  const nodes = editor.getAllNodes();
+  Object.keys(nodes).forEach((nodeId) => {
+    const node = editor.getNode(nodeId);
+    if (node && !node.data.collapsed) {
+      editor.toggleSubtree(nodeId);
+    }
+  });
+}
+
+/**
+ * Expand all nodes in the editor
+ */
+function expandAllNodes() {
+  const nodes = editor.getAllNodes();
+  Object.keys(nodes).forEach((nodeId) => {
+    const node = editor.getNode(nodeId);
+    if (node && node.data.collapsed) {
+      editor.toggleSubtree(nodeId);
+    }
+  });
+}
+
+/**
  * Setup canvas panning with spacebar + left mouse button
  */
 let isSpacePressed = false;
@@ -735,7 +771,7 @@ function setupCanvasPanning() {
       editor.editor.canvas_x = canvasStartX + deltaX;
       editor.editor.canvas_y = canvasStartY + deltaY;
 
-      editor.editor.precanvas.style.transform = `translate(${editor.editor.canvas_x}px, ${editor.editor.canvas_y}px) scale(${editor.editor.zoom})`;
+      editor.editor.zoom_refresh();
 
       e.preventDefault();
     }

@@ -44,7 +44,7 @@ class BehaviorTreeEditor {
 
     // 启用画布拖拽 - 确保这些设置正确
     this.editor.editor_mode = "edit"; // 编辑模式
-    this.editor.zoom_value = 1;
+    this.editor.zoom_value = 0.1;
     this.editor.zoom_last_value = 1;
 
     this.editor.start();
@@ -153,10 +153,11 @@ class BehaviorTreeEditor {
     if (!precanvas) return;
 
     // Override wheel event for better zoom control
-    precanvas.addEventListener(
+    container.addEventListener(
       "wheel",
       (e) => {
         e.preventDefault();
+        if (e.stopImmediatePropagation) e.stopImmediatePropagation();
         e.stopPropagation();
 
         // Get mouse position relative to container
@@ -192,7 +193,7 @@ class BehaviorTreeEditor {
         this.editor.canvas_y = newCanvasY;
 
         // Update transform
-        this.editor.precanvas.style.transform = `translate(${newCanvasX}px, ${newCanvasY}px) scale(${newZoom})`;
+        this.editor.zoom_refresh();
 
         // Log for debugging
         console.log(
@@ -202,7 +203,7 @@ class BehaviorTreeEditor {
         // Dispatch zoom event
         this.editor.dispatch("zoom", newZoom);
       },
-      { passive: false },
+      { passive: false, capture: true },
     );
   }
 
@@ -262,6 +263,7 @@ class BehaviorTreeEditor {
       nodeType: nodeType,
       status: additionalData.status || NodeStatus.IDLE,
       ports: additionalData.ports || {},
+      collapsed: !!additionalData.collapsed,
     };
 
     // Generate HTML content
@@ -301,6 +303,9 @@ class BehaviorTreeEditor {
 
     // 设置端口值输入事件监听
     this.setupPortInputListeners(nodeId);
+
+    // 设置节点头部动作（折叠/展开）
+    this.setupNodeHeaderActions(nodeId);
 
     return nodeId;
   }
@@ -375,6 +380,270 @@ class BehaviorTreeEditor {
   }
 
   /**
+   * Setup node header actions (collapse/expand subtree)
+   * @param {number} nodeId
+   */
+  setupNodeHeaderActions(nodeId) {
+    const idStr = String(parseInt(nodeId, 10));
+    const storeNodeRef =
+      this.editor &&
+      this.editor.drawflow &&
+      this.editor.drawflow.drawflow &&
+      this.editor.drawflow.drawflow.Home &&
+      this.editor.drawflow.drawflow.Home.data &&
+      this.editor.drawflow.drawflow.Home.data[idStr];
+    const nodeElement = document.getElementById(`node-${nodeId}`);
+    if (!nodeElement || !storeNodeRef) return;
+
+    const btn = nodeElement.querySelector(".btn-collapse");
+    if (!btn) return;
+
+    // Initialize button state
+    const collapsed = !!(
+      storeNodeRef &&
+      storeNodeRef.data &&
+      storeNodeRef.data.collapsed
+    );
+    btn.textContent = collapsed ? "+" : "−";
+
+    // Prevent drag on button
+    btn.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+    });
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.toggleSubtree(nodeId);
+    });
+  }
+
+  /**
+   * Toggle subtree collapsed state for a node
+   */
+  toggleSubtree(nodeId) {
+    const idStr = String(parseInt(nodeId, 10));
+    const storeNodeRef =
+      this.editor &&
+      this.editor.drawflow &&
+      this.editor.drawflow.drawflow &&
+      this.editor.drawflow.drawflow.Home &&
+      this.editor.drawflow.drawflow.Home.data &&
+      this.editor.drawflow.drawflow.Home.data[idStr];
+    if (!storeNodeRef || !storeNodeRef.data) return;
+
+    const newState = !(storeNodeRef.data && storeNodeRef.data.collapsed);
+    storeNodeRef.data.collapsed = newState;
+
+    // Update button label
+    const nodeElement = document.getElementById(`node-${nodeId}`);
+    if (nodeElement) {
+      const btn = nodeElement.querySelector(".btn-collapse");
+      if (btn) {
+        btn.textContent = newState ? "+" : "−";
+      }
+    }
+
+    // Apply visibility to descendants
+    console.log("toggleSubtree", nodeId, "collapsed ->", newState);
+    this.setSubtreeVisibility(nodeId, newState);
+
+    // Ensure connections are updated for the toggled node itself
+    this.updateConnectionsVisibilityForNodeId(nodeId, newState);
+    this.editor.updateConnectionNodes(`node-${nodeId}`);
+
+    // Ensure connections are updated for the toggled node itself
+    this.updateConnectionsVisibilityForNodeId(nodeId, newState);
+    this.editor.updateConnectionNodes(`node-${nodeId}`);
+
+    // Ensure connections are updated for the toggled node itself
+    this.updateConnectionsVisibilityForNodeId(nodeId, newState);
+    this.editor.updateConnectionNodes(`node-${nodeId}`);
+
+    // Update button label and rebind after visibility changes
+    if (nodeElement) {
+      const btn2 = nodeElement.querySelector(".btn-collapse");
+      if (btn2) {
+        btn2.textContent = newState ? "+" : "−";
+      }
+      this.setupNodeHeaderActions(nodeId);
+    }
+
+    // Refresh connections and visibility for parent and subtree
+    this.editor.updateConnectionNodes(`node-${nodeId}`);
+    this.updateAllConnectionsVisibility();
+    this.editor.zoom_refresh();
+  }
+
+  /**
+   * Get all descendant node IDs of a node
+   * Prevent cycles and duplicates using a visited set
+   */
+  getAllDescendantNodeIds(nodeId) {
+    const result = [];
+    const root = this.getNode(nodeId);
+    if (!root) return result;
+
+    const visited = new Set();
+    visited.add(nodeId);
+
+    const queue = [...this.getChildNodes(root)];
+    while (queue.length > 0) {
+      const n = queue.shift();
+      if (!n) continue;
+      if (visited.has(n.id)) continue;
+      visited.add(n.id);
+      result.push(n.id);
+      const children = this.getChildNodes(n) || [];
+      for (const c of children) {
+        if (c && !visited.has(c.id)) {
+          queue.push(c);
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Show/Hide descendants of node (not including the node itself)
+   * Adds defensive checks and verbose logs to help trace expand/collapse flows
+   */
+  setSubtreeVisibility(nodeId, hidden) {
+    const descendantIds = this.getAllDescendantNodeIds(nodeId) || [];
+    console.log(
+      `[collapse] setSubtreeVisibility node=${nodeId}, hidden=${hidden}, descendants=${descendantIds.length}`,
+    );
+    if (descendantIds.length === 0) {
+      return;
+    }
+
+    let updatedNodes = 0;
+
+    descendantIds.forEach((id) => {
+      const el = document.getElementById(`node-${id}`);
+      if (!el) {
+        console.warn(`[collapse] DOM element not found for node-${id}`);
+        return;
+      }
+
+      if (hidden) {
+        if (el.style.display !== "none" || el.style.visibility !== "hidden") {
+          el.style.display = "none";
+          el.style.visibility = "hidden";
+          updatedNodes++;
+        }
+      } else {
+        if (el.style.display === "none" || el.style.visibility === "hidden") {
+          el.style.display = "";
+          el.style.visibility = "";
+          updatedNodes++;
+        }
+      }
+
+      this.updateConnectionsVisibilityForNodeId(id, hidden);
+      if (
+        !hidden &&
+        this.editor &&
+        typeof this.editor.updateConnectionNodes === "function"
+      ) {
+        this.editor.updateConnectionNodes(`node-${id}`);
+      }
+      // Ensure connections are hidden when collapsing
+      if (hidden) {
+        this.updateConnectionsVisibilityForNodeId(id, true);
+      }
+    });
+
+    if (!hidden) {
+      // Respect nested collapsed children: keep their subtrees hidden
+      descendantIds.forEach((id) => {
+        const n = this.getNode(id);
+        if (n && n.data && n.data.collapsed) {
+          this.setSubtreeVisibility(id, true);
+        }
+      });
+    }
+
+    console.log(
+      `[collapse] setSubtreeVisibility done for node=${nodeId}, hidden=${hidden}, updated=${updatedNodes}`,
+    );
+  }
+
+  /**
+   * Update visibility of connections for a specific node
+   */
+  updateConnectionsVisibilityForNodeId(nodeId, hidden) {
+    const selector = [
+      `.connection.node_in_node-${nodeId}`,
+      `.connection.node_out_node-${nodeId}`,
+      `.connection.node_in_node_${nodeId}`,
+      `.connection.node_out_node_${nodeId}`,
+      `.connection.node_in_node-${nodeId} .main-path`,
+      `.connection.node_out_node-${nodeId} .main-path`,
+      `.connection.node_in_node_${nodeId} .main-path`,
+      `.connection.node_out_node_${nodeId} .main-path`,
+    ].join(", ");
+    const conns = document.querySelectorAll(selector);
+    conns.forEach((c) => {
+      const container =
+        c.classList && c.classList.contains("connection")
+          ? c
+          : c.closest(".connection");
+      if (container) {
+        container.style.display = hidden ? "none" : "";
+      }
+    });
+  }
+
+  /**
+   * Update visibility of all connections based on DOM visibility of nodes
+   */
+  updateAllConnectionsVisibility() {
+    const nodes = this.getAllNodes();
+    Object.keys(nodes).forEach((nodeId) => {
+      const el = document.getElementById(`node-${nodeId}`);
+      let hidden = false;
+      if (!el) {
+        hidden = true;
+      } else {
+        const cs = window.getComputedStyle(el);
+        hidden = cs.display === "none" || cs.visibility === "hidden";
+      }
+      this.updateConnectionsVisibilityForNodeId(nodeId, hidden);
+    });
+  }
+
+  /**
+   * Reapply collapsed states for all nodes (after layout/refresh)
+   */
+  reapplyCollapsedStates() {
+    const nodes = this.getAllNodes();
+    Object.keys(nodes).forEach((nodeId) => {
+      const idStr = String(parseInt(nodeId, 10));
+      const storeNodeRef =
+        this.editor &&
+        this.editor.drawflow &&
+        this.editor.drawflow.drawflow &&
+        this.editor.drawflow.drawflow.Home &&
+        this.editor.drawflow.drawflow.Home.data &&
+        this.editor.drawflow.drawflow.Home.data[idStr];
+      if (storeNodeRef && storeNodeRef.data) {
+        if (storeNodeRef.data.collapsed) {
+          this.setSubtreeVisibility(parseInt(nodeId), true);
+        }
+        // Rebind header actions and sync button icon with current state
+        this.setupNodeHeaderActions(parseInt(nodeId));
+        const el = document.getElementById(`node-${parseInt(nodeId)}`);
+        if (el) {
+          const btn = el.querySelector(".btn-collapse");
+          if (btn) btn.textContent = storeNodeRef.data.collapsed ? "+" : "−";
+        }
+      }
+    });
+    this.updateAllConnectionsVisibility();
+  }
+
+  /**
    * Generate HTML for a node
    * @param {Object} template - Node template
    * @param {Object} nodeData - Node data
@@ -385,6 +654,7 @@ class BehaviorTreeEditor {
             <div class="drawflow-node-header">
                 <span class="node-icon">${template.icon}</span>
                 <span class="node-title">${template.name}</span>
+                <button class="btn-collapse" title="折叠/展开子树">${nodeData.collapsed ? "+" : "−"}</button>
                 <span class="node-status ${this.nodeTemplates.getStatusClassName(nodeData.status)}"></span>
             </div>
             <div class="drawflow-node-body">
@@ -485,6 +755,8 @@ class BehaviorTreeEditor {
           contentElement.innerHTML = html;
           // 重新设置端口输入监听器
           this.setupPortInputListeners(nodeId);
+          // 重新设置头部动作监听器
+          this.setupNodeHeaderActions(nodeId);
         }
       }
     }
@@ -540,7 +812,28 @@ class BehaviorTreeEditor {
    * @returns {Object} Editor data
    */
   export() {
-    return this.editor.export();
+    const data = this.editor.export();
+    Object.values(data.drawflow.Home.data).forEach((node) => {
+      if (node.inputs) {
+        node.data.inputPorts = Object.entries(node.inputs).reduce(
+          (acc, [key, input]) => {
+            acc[key] = input.connections.map((conn) => conn.data);
+            return acc;
+          },
+          {},
+        );
+      }
+      if (node.outputs) {
+        node.data.outputPorts = Object.entries(node.outputs).reduce(
+          (acc, [key, output]) => {
+            acc[key] = output.connections.map((conn) => conn.data);
+            return acc;
+          },
+          {},
+        );
+      }
+    });
+    return data;
   }
 
   /**
@@ -550,12 +843,49 @@ class BehaviorTreeEditor {
   import(data) {
     this.clear();
     this.editor.import(data);
+
+    // Restore ports data
+    Object.values(data.drawflow.Home.data).forEach((node) => {
+      if (node.data.inputPorts) {
+        Object.entries(node.data.inputPorts).forEach(([key, connections]) => {
+          if (node.inputs[key]) {
+            node.inputs[key].connections = connections.map((conn) => ({
+              node: conn.node,
+              input: conn.input,
+              data: conn.data,
+            }));
+          }
+        });
+      }
+      if (node.data.outputPorts) {
+        Object.entries(node.data.outputPorts).forEach(([key, connections]) => {
+          if (node.outputs[key]) {
+            node.outputs[key].connections = connections.map((conn) => ({
+              node: conn.node,
+              output: conn.output,
+              data: conn.data,
+            }));
+          }
+        });
+      }
+    });
     this.updateNodeCount();
 
     // 为所有导入的节点设置端口输入监听器
     const nodes = this.getAllNodes();
     Object.keys(nodes).forEach((nodeId) => {
-      this.setupPortInputListeners(parseInt(nodeId));
+      const idNum = parseInt(nodeId);
+      this.setupPortInputListeners(idNum);
+      this.setupNodeHeaderActions(idNum);
+      // 应用折叠状态
+      const n = this.getNode(idNum);
+      if (n && n.data && n.data.collapsed) {
+        this.setSubtreeVisibility(idNum, true);
+        this.updateConnectionsVisibilityForNodeId(idNum, true);
+        if (this.editor && typeof this.editor.zoom_refresh === "function") {
+          this.editor.zoom_refresh();
+        }
+      }
     });
   }
 
@@ -680,6 +1010,8 @@ class BehaviorTreeEditor {
 
     // Refresh canvas to show updated positions
     this.refreshCanvas();
+    this.updateAllConnectionsVisibility();
+    this.reapplyCollapsedStates();
 
     // Fit view after rearrangement
     setTimeout(() => {
@@ -830,6 +1162,9 @@ class BehaviorTreeEditor {
       this.editor.updateConnectionNodes(`node-${conn.outputNode}`);
       this.editor.updateConnectionNodes(`node-${conn.inputNode}`);
     });
+    // Update connections visibility based on node visibility
+    this.updateAllConnectionsVisibility();
+    this.reapplyCollapsedStates();
   }
 
   /**
@@ -837,7 +1172,7 @@ class BehaviorTreeEditor {
    */
   zoomIn() {
     this.editor.zoom_in();
-    this.updateCanvasTransform();
+    this.editor.zoom_refresh();
   }
 
   /**
@@ -845,7 +1180,7 @@ class BehaviorTreeEditor {
    */
   zoomOut() {
     this.editor.zoom_out();
-    this.updateCanvasTransform();
+    this.editor.zoom_refresh();
   }
 
   /**
@@ -853,7 +1188,7 @@ class BehaviorTreeEditor {
    */
   zoomReset() {
     this.editor.zoom_reset();
-    this.updateCanvasTransform();
+    this.editor.zoom_refresh();
   }
 
   /**
@@ -862,7 +1197,7 @@ class BehaviorTreeEditor {
    */
   updateCanvasTransform() {
     if (this.editor && this.editor.precanvas) {
-      this.editor.precanvas.style.transform = `translate(${this.editor.canvas_x}px, ${this.editor.canvas_y}px) scale(${this.editor.zoom})`;
+      this.editor.zoom_refresh();
     }
   }
 
@@ -902,7 +1237,7 @@ class BehaviorTreeEditor {
     // Apply offset
     this.editor.canvas_x = offsetX;
     this.editor.canvas_y = offsetY;
-    this.editor.precanvas.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${this.editor.zoom})`;
+    this.editor.zoom_refresh();
   }
 
   /**
@@ -922,7 +1257,7 @@ class BehaviorTreeEditor {
       this.editor.canvas_y = 0;
       this.editor.zoom = 1;
       this.editor.zoom_last_value = 1;
-      this.editor.precanvas.style.transform = `translate(0px, 0px) scale(1)`;
+      this.editor.zoom_refresh();
       return;
     }
 
@@ -971,7 +1306,7 @@ class BehaviorTreeEditor {
     this.editor.zoom_last_value = zoom;
     this.editor.canvas_x = offsetX;
     this.editor.canvas_y = offsetY;
-    this.editor.precanvas.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${zoom})`;
+    this.editor.zoom_refresh();
 
     console.log(
       `Fit to view: zoom=${zoom.toFixed(2)}, offset=(${offsetX.toFixed(0)}, ${offsetY.toFixed(0)})`,
