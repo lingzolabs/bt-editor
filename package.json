@@ -1,0 +1,22 @@
+{
+  "name": "behaviortree-editor",
+  "version": "1.0.0",
+  "description": "A behavior tree editor and debugger based on Drawflow",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "behavior-tree",
+    "editor",
+    "drawflow",
+    "visual-editor"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "drawflow": "^0.0.60"
+  },
+  "devDependencies": {}
+}

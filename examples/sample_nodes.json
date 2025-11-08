@@ -1,0 +1,45 @@
+{
+  "nodes": [
+    {
+      "id": "MySimpleAction",
+      "ports": null,
+      "type": 1
+    },
+    {
+      "id": "Inverter",
+      "ports": null,
+      "type": 2
+    },
+    {
+      "id": "Delay",
+      "ports": [
+        {
+          "mode": 0,
+          "name": "delay",
+          "type_name": "int"
+        }
+      ],
+      "type": 2
+    },
+    {
+      "id": "AlwaysFailure",
+      "ports": null,
+      "type": 1
+    },
+    {
+      "id": "AlwaysSuccess",
+      "ports": null,
+      "type": 1
+    },
+    {
+      "id": "Sequence",
+      "ports": null,
+      "type": 0
+    },
+    {
+      "id": "Selector",
+      "ports": null,
+      "type": 0
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "root": {
+    "children": [
+      {
+        "children": [
+          {
+            "children": [
+              {
+                "name": "MySimpleAction",
+                "status": 3,
+                "type": 1
+              }
+            ],
+            "name": "Delay",
+            "status": 3,
+            "type": 2
+          },
+          {
+            "children": [
+              {
+                "name": "AlwaysFailure",
+                "status": 3,
+                "type": 1
+              }
+            ],
+            "name": "Inverter",
+            "status": 3,
+            "type": 2
+          }
+        ],
+        "name": "Sequence",
+        "status": 3,
+        "type": 0
+      },
+      {
+        "name": "AlwaysSuccess",
+        "status": 3,
+        "type": 1
+      }
+    ],
+    "name": "Selector",
+    "status": 3,
+    "type": 0
+  }
+}
