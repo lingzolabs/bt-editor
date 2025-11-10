@@ -367,12 +367,6 @@
     height: 20px !important;
 }
 
-/* Multiple inputs/outputs positioning */
-.drawflow .drawflow-node .inputs,
-.drawflow .drawflow-node .outputs {
-    position: relative;
-}
-
 /* ========== Connection Lines ========== */
 .drawflow .connection {
     position: absolute;

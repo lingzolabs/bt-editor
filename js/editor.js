@@ -318,6 +318,22 @@ class BehaviorTreeEditor {
     const nodeElement = document.getElementById(`node-${nodeId}`);
     if (!nodeElement) return;
 
+    const smartConvert = (inputValue) => {
+      const str = String(inputValue).trim();
+      // 空字符串
+      if (str === "") {
+        return null;
+      }
+      // 布尔值
+      if (str.toLowerCase() === "true") return true;
+      if (str.toLowerCase() === "false") return false;
+      // 数值
+      if (!isNaN(Number(str)) && str !== "") {
+        return Number(str);
+      }
+      // 返回原始字符串
+      return str;
+    };
     const inputs = nodeElement.querySelectorAll(".port-value-input");
     inputs.forEach((input) => {
       // 使用 input 事件实时保存（每次输入都保存）
@@ -331,17 +347,17 @@ class BehaviorTreeEditor {
           if (!node.data.ports) {
             node.data.ports = {};
           }
-          node.data.ports[portName] = value;
+          node.data.ports[portName] = smartConvert(value);
 
           // 更新 title 显示完整值
           e.target.title = value || portName;
-
+          this.updateNodeData(nodeId, node.data);
           console.log(`Updated port ${portName} = ${value} for node ${nodeId}`);
         }
       };
 
       // 监听 input 事件（实时保存）
-      input.addEventListener("input", updatePortValue);
+      // input.addEventListener("input", updatePortValue);
 
       // 也监听 change 事件（失去焦点时）
       input.addEventListener("change", updatePortValue);
@@ -741,6 +757,7 @@ class BehaviorTreeEditor {
     if (!node) return;
 
     Object.assign(node.data, newData);
+    this.editor.updateNodeDataFromId(nodeId, node.data);
 
     // Regenerate HTML if needed
     const template = this.nodeTemplates.getTemplate(node.data.nodeType);
@@ -1157,14 +1174,17 @@ class BehaviorTreeEditor {
       }
     });
 
-    // Update connection positions for all connections
-    allConnections.forEach((conn) => {
-      this.editor.updateConnectionNodes(`node-${conn.outputNode}`);
-      this.editor.updateConnectionNodes(`node-${conn.inputNode}`);
-    });
     // Update connections visibility based on node visibility
     this.updateAllConnectionsVisibility();
     this.reapplyCollapsedStates();
+    setTimeout(() => {
+      // Update connection positions for all connections
+      allConnections.forEach((conn) => {
+        this.editor.updateConnectionNodes(`node-${conn.outputNode}`);
+        this.editor.updateConnectionNodes(`node-${conn.inputNode}`);
+      });
+      this.editor.zoom_refresh();
+    }, 300);
   }
 
   /**
