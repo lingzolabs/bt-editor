@@ -37,14 +37,15 @@ class BehaviorTreeEditor {
     this.editor = new Drawflow(container);
 
     // Drawflow 配置
-    this.editor.reroute = true;
-    this.editor.reroute_fix_curvature = true;
+    this.editor.reroute = false;
     this.editor.force_first_input = false;
+    this.editor.curvature = 0;
     this.editor.useuuid = false;
 
     // 启用画布拖拽 - 确保这些设置正确
     this.editor.editor_mode = "edit"; // 编辑模式
     this.editor.zoom_value = 0.1;
+    this.editor.zoom_min = 0.7;
     this.editor.zoom_last_value = 1;
 
     this.editor.start();
@@ -55,9 +56,6 @@ class BehaviorTreeEditor {
 
     // Setup event listeners
     this.setupEventListeners();
-
-    // Setup custom zoom handling to fix zoom issues
-    this.setupCustomZoomHandling();
 
     // Apply default layout mode
     this.applyLayoutMode();
@@ -126,85 +124,6 @@ class BehaviorTreeEditor {
         this.onConnectionRemoved(connection);
       }
     });
-
-    // Click on canvas
-    this.editor.on("click", (e) => {
-      // Clear selection when clicking on canvas
-      if (e.target.classList.contains("drawflow")) {
-        this.clearSelection();
-      }
-    });
-
-    // Context menu
-    this.editor.on("contextmenu", (e) => {
-      e.preventDefault();
-      // Will be handled by main.js
-    });
-  }
-
-  /**
-   * Setup custom zoom handling to prevent nodes from disappearing
-   */
-  setupCustomZoomHandling() {
-    const container = document.getElementById(this.containerId);
-    if (!container) return;
-
-    const precanvas = this.editor.precanvas;
-    if (!precanvas) return;
-
-    // Override wheel event for better zoom control
-    container.addEventListener(
-      "wheel",
-      (e) => {
-        e.preventDefault();
-        if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-        e.stopPropagation();
-
-        // Get mouse position relative to container
-        const rect = container.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        // Calculate position in canvas coordinates (before zoom)
-        const canvasX = (mouseX - this.editor.canvas_x) / this.editor.zoom;
-        const canvasY = (mouseY - this.editor.canvas_y) / this.editor.zoom;
-
-        // Calculate new zoom with smoother steps (multiplicative is better than additive)
-        const zoomFactor = e.deltaY > 0 ? 0.95 : 1.05;
-        const oldZoom = this.editor.zoom;
-        let newZoom = oldZoom * zoomFactor;
-
-        // Clamp zoom to reasonable range
-        newZoom = Math.max(0.1, Math.min(newZoom, 2));
-
-        // Round to avoid floating point accumulation errors
-        newZoom = Math.round(newZoom * 1000) / 1000;
-
-        if (newZoom === oldZoom) return;
-
-        // Calculate new canvas position to keep mouse point stable
-        const newCanvasX = mouseX - canvasX * newZoom;
-        const newCanvasY = mouseY - canvasY * newZoom;
-
-        // Apply new zoom and position
-        this.editor.zoom = newZoom;
-        this.editor.zoom_last_value = newZoom;
-        this.editor.canvas_x = newCanvasX;
-        this.editor.canvas_y = newCanvasY;
-
-        // Update transform
-        this.editor.zoom_refresh();
-
-        // Log for debugging
-        console.log(
-          `Zoom: ${newZoom.toFixed(3)}, Canvas: (${Math.round(newCanvasX)}, ${Math.round(newCanvasY)})`,
-        );
-
-        // Dispatch zoom event
-        this.editor.dispatch("zoom", newZoom);
-      },
-      { passive: false, capture: true },
-    );
   }
 
   /**
@@ -423,15 +342,24 @@ class BehaviorTreeEditor {
     btn.textContent = collapsed ? "+" : "−";
 
     // Prevent drag on button
-    btn.addEventListener("mousedown", (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-    });
+    btn.addEventListener(
+      "mousedown",
+      (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      },
+      true,
+    );
 
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      this.toggleSubtree(nodeId);
-    });
+    btn.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        this.toggleSubtree(nodeId);
+      },
+      true,
+    );
   }
 
   /**
@@ -467,23 +395,6 @@ class BehaviorTreeEditor {
     // Ensure connections are updated for the toggled node itself
     this.updateConnectionsVisibilityForNodeId(nodeId, newState);
     this.editor.updateConnectionNodes(`node-${nodeId}`);
-
-    // Ensure connections are updated for the toggled node itself
-    this.updateConnectionsVisibilityForNodeId(nodeId, newState);
-    this.editor.updateConnectionNodes(`node-${nodeId}`);
-
-    // Ensure connections are updated for the toggled node itself
-    this.updateConnectionsVisibilityForNodeId(nodeId, newState);
-    this.editor.updateConnectionNodes(`node-${nodeId}`);
-
-    // Update button label and rebind after visibility changes
-    if (nodeElement) {
-      const btn2 = nodeElement.querySelector(".btn-collapse");
-      if (btn2) {
-        btn2.textContent = newState ? "+" : "−";
-      }
-      this.setupNodeHeaderActions(nodeId);
-    }
 
     // Refresh connections and visibility for parent and subtree
     this.editor.updateConnectionNodes(`node-${nodeId}`);
@@ -887,23 +798,8 @@ class BehaviorTreeEditor {
       }
     });
     this.updateNodeCount();
-
-    // 为所有导入的节点设置端口输入监听器
-    const nodes = this.getAllNodes();
-    Object.keys(nodes).forEach((nodeId) => {
-      const idNum = parseInt(nodeId);
-      this.setupPortInputListeners(idNum);
-      this.setupNodeHeaderActions(idNum);
-      // 应用折叠状态
-      const n = this.getNode(idNum);
-      if (n && n.data && n.data.collapsed) {
-        this.setSubtreeVisibility(idNum, true);
-        this.updateConnectionsVisibilityForNodeId(idNum, true);
-        if (this.editor && typeof this.editor.zoom_refresh === "function") {
-          this.editor.zoom_refresh();
-        }
-      }
-    });
+    this.applyLayoutMode();
+    this.rearrangeNodes();
   }
 
   /**
@@ -1028,7 +924,6 @@ class BehaviorTreeEditor {
     // Refresh canvas to show updated positions
     this.refreshCanvas();
     this.updateAllConnectionsVisibility();
-    this.reapplyCollapsedStates();
 
     // Fit view after rearrangement
     setTimeout(() => {

@@ -245,7 +245,7 @@ class BehaviorTree {
       },
       class: template
         ? this.nodeTemplates.getTypeClassName(template.type)
-        : "action",
+        : "node-action",
       html: this.generateNodeHTML(treeNode, template),
       typenode: false,
       inputs: {
@@ -263,6 +263,9 @@ class BehaviorTree {
       pos_x: posX,
       pos_y: posY,
     };
+    if (nodeId == 1) {
+      drawflowNode.inputs = {};
+    }
 
     drawflowNodes[nodeId] = drawflowNode;
 
@@ -326,6 +329,7 @@ class BehaviorTree {
             <div class="drawflow-node-header">
                 <span class="node-icon">${template.icon}</span>
                 <span class="node-title">${template.name}</span>
+                <button class="btn-collapse" title="折叠/展开子树">-</button>
                 <span class="node-status ${this.nodeTemplates.getStatusClassName(treeNode.status || NodeStatus.IDLE)}"></span>
             </div>
             <div class="drawflow-node-body">

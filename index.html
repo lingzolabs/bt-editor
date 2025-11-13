@@ -1,236 +1,354 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Behavior Tree Editor</title>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Behavior Tree Editor</title>
 
-    <!-- Drawflow CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css">
+        <!-- Drawflow CSS -->
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css"
+        />
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/drawflow.custom.css">
-</head>
-<body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-left">
-            <h1 class="title">🌲 Behavior Tree Editor</h1>
-        </div>
-        <div class="header-right">
-            <button id="btn-clear" class="btn btn-secondary" title="清空画布">
-                <span>🗑️</span> 清空
-            </button>
-            <button id="btn-import-nodes" class="btn btn-secondary" title="导入节点定义">
-                <span>📥</span> 导入节点
-            </button>
-            <button id="btn-import-tree" class="btn btn-secondary" title="导入行为树">
-                <span>📂</span> 导入树
-            </button>
-            <button id="btn-export" class="btn btn-primary" title="导出行为树">
-                <span>💾</span> 导出
-            </button>
-        </div>
-    </header>
-
-    <!-- Main Container -->
-    <div class="main-container">
-        <!-- Sidebar - Node Palette -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h2>节点面板</h2>
+        <!-- Custom CSS -->
+        <link rel="stylesheet" href="css/main.css" />
+        <link rel="stylesheet" href="css/drawflow.custom.css" />
+    </head>
+    <body>
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="title">🌲 Behavior Tree Editor</h1>
             </div>
-
-            <div class="node-category">
-                <h3 class="category-title">🔀 组合节点 (Composite)</h3>
-                <div class="node-list" id="composite-nodes">
-                    <!-- Composite nodes will be added here dynamically -->
-                </div>
-            </div>
-
-            <div class="node-category">
-                <h3 class="category-title">🎬 动作节点 (Action)</h3>
-                <div class="node-list" id="action-nodes">
-                    <!-- Action nodes will be added here dynamically -->
-                </div>
-            </div>
-
-            <div class="node-category">
-                <h3 class="category-title">🎭 装饰器节点 (Decorator)</h3>
-                <div class="node-list" id="decorator-nodes">
-                    <!-- Decorator nodes will be added here dynamically -->
-                </div>
-            </div>
-
-            <div class="sidebar-footer">
-                <button id="btn-add-custom-node" class="btn btn-block btn-secondary">
-                    ➕ 添加自定义节点
+            <div class="header-right">
+                <button
+                    id="btn-clear"
+                    class="btn btn-secondary"
+                    title="清空画布"
+                >
+                    <span>🗑️</span> 清空
+                </button>
+                <button
+                    id="btn-import-nodes"
+                    class="btn btn-secondary"
+                    title="导入节点定义"
+                >
+                    <span>📥</span> 导入节点
+                </button>
+                <button
+                    id="btn-import-tree"
+                    class="btn btn-secondary"
+                    title="导入行为树"
+                >
+                    <span>📂</span> 导入树
+                </button>
+                <button
+                    id="btn-export"
+                    class="btn btn-primary"
+                    title="导出行为树"
+                >
+                    <span>💾</span> 导出
                 </button>
             </div>
-        </aside>
+        </header>
 
-        <!-- Main Editor Area -->
-        <main class="editor-container">
-            <div class="editor-toolbar">
-                <div class="toolbar-group">
-                    <button id="btn-zoom-in" class="btn-icon" title="放大">🔍+</button>
-                    <button id="btn-zoom-out" class="btn-icon" title="缩小">🔍-</button>
-                    <button id="btn-zoom-reset" class="btn-icon" title="重置缩放">⚪</button>
+        <!-- Main Container -->
+        <div class="main-container">
+            <!-- Sidebar - Node Palette -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>节点面板</h2>
                 </div>
-                <div class="toolbar-group">
-                    <span class="toolbar-label">视图:</span>
-                    <button id="btn-center-view" class="btn-icon" title="居中视图">🎯</button>
-                    <button id="btn-fit-view" class="btn-icon" title="适应画布">📐</button>
-                </div>
-                <div class="toolbar-group">
-                    <span class="toolbar-label">布局:</span>
-                    <button id="btn-toggle-layout" class="btn-icon" title="切换布局方向（左右/上下）">⇄</button>
-                </div>
-                <div class="toolbar-group">
-                    <span class="toolbar-label">子树操作:</span>
-                    <button id="btn-collapse-all" class="btn-icon" title="折叠所有子树">🔽 全部折叠</button>
-                    <button id="btn-expand-all" class="btn-icon" title="展开所有子树">🔼 全部展开</button>
-                </div>
-                <div class="toolbar-group">
-                    <span class="toolbar-label" id="node-count">节点: 0</span>
-                </div>
-                <div class="toolbar-group" style="margin-left: auto;">
-                    <span class="toolbar-label" style="font-size: 11px; color: #808080;">💡 按住右键或空格键拖动画布</span>
-                </div>
-            </div>
 
-            <!-- Drawflow Canvas -->
-            <div id="drawflow" class="drawflow-container" tabindex="0">
-                <div class="drawflow-hint">
-                    <p>👈 从左侧拖拽节点到画布开始构建行为树</p>
-                    <p>🖱️ 画布移动: 右键拖动 或 按住空格键+左键拖动</p>
-                    <p>💡 提示: 缩放用鼠标滚轮</p>
+                <div class="node-category">
+                    <h3 class="category-title">🔀 组合节点 (Composite)</h3>
+                    <div class="node-list" id="composite-nodes">
+                        <!-- Composite nodes will be added here dynamically -->
+                    </div>
                 </div>
-            </div>
-        </main>
-    </div>
 
-    <!-- Status Bar -->
-    <footer class="status-bar">
-        <div class="status-left">
-            <span id="status-message">就绪</span>
+                <div class="node-category">
+                    <h3 class="category-title">🎬 动作节点 (Action)</h3>
+                    <div class="node-list" id="action-nodes">
+                        <!-- Action nodes will be added here dynamically -->
+                    </div>
+                </div>
+
+                <div class="node-category">
+                    <h3 class="category-title">🎭 装饰器节点 (Decorator)</h3>
+                    <div class="node-list" id="decorator-nodes">
+                        <!-- Decorator nodes will be added here dynamically -->
+                    </div>
+                </div>
+
+                <div class="sidebar-footer">
+                    <button
+                        id="btn-add-custom-node"
+                        class="btn btn-block btn-secondary"
+                    >
+                        ➕ 添加自定义节点
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Editor Area -->
+            <main class="editor-container">
+                <div class="editor-toolbar">
+                    <div class="toolbar-group">
+                        <button id="btn-zoom-in" class="btn-icon" title="放大">
+                            🔍+
+                        </button>
+                        <button id="btn-zoom-out" class="btn-icon" title="缩小">
+                            🔍-
+                        </button>
+                        <button
+                            id="btn-zoom-reset"
+                            class="btn-icon"
+                            title="重置缩放"
+                        >
+                            ⚪
+                        </button>
+                    </div>
+                    <div class="toolbar-group">
+                        <span class="toolbar-label">视图:</span>
+                        <button
+                            id="btn-center-view"
+                            class="btn-icon"
+                            title="居中视图"
+                        >
+                            🎯
+                        </button>
+                        <button
+                            id="btn-fit-view"
+                            class="btn-icon"
+                            title="适应画布"
+                        >
+                            📐
+                        </button>
+                    </div>
+                    <div class="toolbar-group">
+                        <span class="toolbar-label">布局:</span>
+                        <button
+                            id="btn-toggle-layout"
+                            class="btn-icon"
+                            title="切换布局方向（左右/上下）"
+                        >
+                            ⇄
+                        </button>
+                    </div>
+                    <div class="toolbar-group">
+                        <span class="toolbar-label">子树操作:</span>
+                        <button
+                            id="btn-collapse-all"
+                            class="btn-icon"
+                            title="折叠所有子树"
+                        >
+                            🔽 全部折叠
+                        </button>
+                        <button
+                            id="btn-expand-all"
+                            class="btn-icon"
+                            title="展开所有子树"
+                        >
+                            🔼 全部展开
+                        </button>
+                    </div>
+                    <div class="toolbar-group">
+                        <span class="toolbar-label" id="node-count"
+                            >节点: 0</span
+                        >
+                    </div>
+                    <div class="toolbar-group" style="margin-left: auto">
+                        <span
+                            class="toolbar-label"
+                            style="font-size: 11px; color: #808080"
+                            >💡 按住右键或空格键拖动画布</span
+                        >
+                    </div>
+                </div>
+
+                <!-- Drawflow Canvas -->
+                <div id="drawflow" class="drawflow-container" tabindex="0">
+                    <div class="drawflow-hint">
+                        <p>👈 从左侧拖拽节点到画布开始构建行为树</p>
+                        <p>🖱️ 画布移动: 右键拖动 或 按住空格键+左键拖动</p>
+                        <p>💡 提示: 缩放用鼠标滚轮</p>
+                    </div>
+                </div>
+            </main>
         </div>
-        <div class="status-right">
-            <span id="cursor-position">X: 0, Y: 0</span>
-        </div>
-    </footer>
 
-    <!-- Modal for Custom Node -->
-    <div id="custom-node-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>添加自定义节点</h2>
-                <button class="modal-close">&times;</button>
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-left">
+                <span id="status-message">就绪</span>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="node-name">节点名称:</label>
-                    <input type="text" id="node-name" placeholder="例如: MyCustomAction">
-                </div>
-                <div class="form-group">
-                    <label for="node-type">节点类型:</label>
-                    <select id="node-type">
-                        <option value="0">组合节点 (Composite)</option>
-                        <option value="1">动作节点 (Action)</option>
-                        <option value="2">装饰器节点 (Decorator)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="node-ports">端口配置 (JSON格式，可选):</label>
-                    <textarea id="node-ports" rows="4" placeholder='[{"name": "delay", "type_name": "int", "mode": 0}]'></textarea>
-                </div>
+            <div class="status-right">
+                <span id="cursor-position">X: 0, Y: 0</span>
             </div>
-            <div class="modal-footer">
-                <button id="btn-cancel-node" class="btn btn-secondary">取消</button>
-                <button id="btn-save-node" class="btn btn-primary">保存</button>
-            </div>
-        </div>
-    </div>
+        </footer>
 
-    <!-- Modal for Import Nodes -->
-    <div id="import-nodes-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>导入节点定义</h2>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="nodes-json">粘贴节点JSON:</label>
-                    <textarea id="nodes-json" rows="15" placeholder='{"nodes": [...]}'></textarea>
+        <!-- Modal for Custom Node -->
+        <div id="custom-node-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>添加自定义节点</h2>
+                    <button class="modal-close">&times;</button>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button id="btn-cancel-import-nodes" class="btn btn-secondary">取消</button>
-                <button id="btn-confirm-import-nodes" class="btn btn-primary">导入</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal for Import Tree -->
-    <div id="import-tree-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>导入行为树</h2>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="tree-json">粘贴行为树JSON:</label>
-                    <textarea id="tree-json" rows="15" placeholder='{"root": {...}}'></textarea>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="node-name">节点名称:</label>
+                        <input
+                            type="text"
+                            id="node-name"
+                            placeholder="例如: MyCustomAction"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label for="node-type">节点类型:</label>
+                        <select id="node-type">
+                            <option value="0">组合节点 (Composite)</option>
+                            <option value="1">动作节点 (Action)</option>
+                            <option value="2">装饰器节点 (Decorator)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="node-ports"
+                            >端口配置 (JSON格式，可选):</label
+                        >
+                        <textarea
+                            id="node-ports"
+                            rows="4"
+                            placeholder='[{"name": "delay", "type_name": "int", "mode": 0}]'
+                        ></textarea>
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button id="btn-cancel-import-tree" class="btn btn-secondary">取消</button>
-                <button id="btn-confirm-import-tree" class="btn btn-primary">导入</button>
+                <div class="modal-footer">
+                    <button id="btn-cancel-node" class="btn btn-secondary">
+                        取消
+                    </button>
+                    <button id="btn-save-node" class="btn btn-primary">
+                        保存
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Modal for Export -->
-    <div id="export-modal" class="modal">
-        <div class="modal-content modal-large">
-            <div class="modal-header">
-                <h2>导出行为树</h2>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>行为树结构:</label>
-                    <textarea id="export-tree-json" rows="15" readonly></textarea>
+        <!-- Modal for Import Nodes -->
+        <div id="import-nodes-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>导入节点定义</h2>
+                    <button class="modal-close">&times;</button>
                 </div>
-                <div class="form-group">
-                    <label>节点定义:</label>
-                    <textarea id="export-nodes-json" rows="10" readonly></textarea>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="nodes-json">粘贴节点JSON:</label>
+                        <textarea
+                            id="nodes-json"
+                            rows="15"
+                            placeholder='{"nodes": [...]}'
+                        ></textarea>
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button id="btn-copy-tree" class="btn btn-secondary">复制树结构</button>
-                <button id="btn-copy-nodes" class="btn btn-secondary">复制节点定义</button>
-                <button id="btn-download-json" class="btn btn-primary">下载JSON文件</button>
-                <button id="btn-close-export" class="btn btn-secondary">关闭</button>
+                <div class="modal-footer">
+                    <button
+                        id="btn-cancel-import-nodes"
+                        class="btn btn-secondary"
+                    >
+                        取消
+                    </button>
+                    <button
+                        id="btn-confirm-import-nodes"
+                        class="btn btn-primary"
+                    >
+                        导入
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Hidden file inputs -->
-    <input type="file" id="file-input" accept=".json" style="display: none;">
+        <!-- Modal for Import Tree -->
+        <div id="import-tree-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>导入行为树</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="tree-json">粘贴行为树JSON:</label>
+                        <textarea
+                            id="tree-json"
+                            rows="15"
+                            placeholder='{"root": {...}}'
+                        ></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button
+                        id="btn-cancel-import-tree"
+                        class="btn btn-secondary"
+                    >
+                        取消
+                    </button>
+                    <button
+                        id="btn-confirm-import-tree"
+                        class="btn btn-primary"
+                    >
+                        导入
+                    </button>
+                </div>
+            </div>
+        </div>
 
-    <!-- Drawflow Library -->
-    <script src="https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js"></script>
+        <!-- Modal for Export -->
+        <div id="export-modal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h2>导出行为树</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>行为树结构:</label>
+                        <textarea
+                            id="export-tree-json"
+                            rows="15"
+                            readonly
+                        ></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-copy-tree" class="btn btn-secondary">
+                        复制树结构
+                    </button>
+                    <button id="btn-download-json" class="btn btn-primary">
+                        下载JSON文件
+                    </button>
+                    <button id="btn-close-export" class="btn btn-secondary">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
 
-    <!-- Application Scripts -->
-    <script src="js/nodeTemplates.js"></script>
-    <script src="js/behaviorTree.js"></script>
-    <script src="js/editor.js"></script>
-    <script src="js/main.js"></script>
-</body>
+        <!-- Hidden file inputs -->
+        <input
+            type="file"
+            id="file-input"
+            accept=".json"
+            style="display: none"
+        />
+
+        <!-- Drawflow Library -->
+        <script src="https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js"></script>
+
+        <!-- Application Scripts -->
+        <script src="js/nodeTemplates.js"></script>
+        <script src="js/behaviorTree.js"></script>
+        <script src="js/editor.js"></script>
+        <script src="js/main.js"></script>
+    </body>
 </html>
-</parameter>
-</invoke>

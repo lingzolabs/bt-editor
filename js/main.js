@@ -291,7 +291,7 @@ function createNodeItem(template) {
   const div = document.createElement("div");
   div.className = `node-item ${nodeTemplates.getTypeClassName(template.type)}`;
   div.draggable = true;
-  div.dataset.nodeType = template.id;
+  div.dataset.nodeType = template.name;
 
   const nameSpan = document.createElement("span");
   nameSpan.className = "node-item-name";
@@ -494,13 +494,8 @@ function handleExport() {
     const treeData = editor.exportBehaviorTree();
     const treeJson = JSON.stringify(treeData, null, 2);
 
-    // Export node definitions
-    const nodesData = nodeTemplates.exportToJSON();
-    const nodesJson = JSON.stringify(nodesData, null, 2);
-
     // Fill textareas
     document.getElementById("export-tree-json").value = treeJson;
-    document.getElementById("export-nodes-json").value = nodesJson;
 
     openModal("export-modal");
     showMessage("导出成功");
@@ -533,13 +528,9 @@ function handleCopyNodes() {
  */
 function handleDownloadJson() {
   const treeJson = document.getElementById("export-tree-json").value;
-  const nodesJson = document.getElementById("export-nodes-json").value;
 
   // Download tree
   downloadFile("behavior_tree.json", treeJson);
-
-  // Download nodes
-  downloadFile("behavior_nodes.json", nodesJson);
 
   showMessage("文件已下载");
 }
@@ -582,7 +573,6 @@ function handleSaveCustomNode() {
 
   // Add template
   nodeTemplates.addTemplate({
-    id: name,
     name: name,
     type: type,
     description: `自定义节点: ${name}`,

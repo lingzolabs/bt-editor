@@ -370,7 +370,6 @@
 /* ========== Connection Lines ========== */
 .drawflow .connection {
     position: absolute;
-    pointer-events: all;
     z-index: 1;
     /* 连接线性能优化 */
     will-change: auto;
@@ -380,20 +379,14 @@
     fill: none;
     stroke: #4a90e2;
     stroke-width: 3px;
-    pointer-events: all;
     transition:
         stroke 0.15s ease,
         stroke-width 0.15s ease;
 }
 
-.drawflow .connection .main-path:hover {
-    stroke: #357abd;
-    stroke-width: 4px;
-}
-
-.drawflow .connection.selected .main-path {
+.drawflow .connection .main-path.selected {
     stroke: #28a745;
-    stroke-width: 4px;
+    stroke-width: 6px;
 }
 
 /* Connection points on lines */
