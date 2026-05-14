@@ -903,6 +903,11 @@ class BehaviorTreeEditor {
 
     if (nodeArray.length === 0) return;
 
+    const container = document.getElementById(this.containerId);
+
+    // Disable transitions during rearrange for instant position updates
+    if (container) container.classList.add("no-transition");
+
     // Build tree structure from connections
     const rootNodes = this.findRootNodes(nodeArray);
 
@@ -910,6 +915,7 @@ class BehaviorTreeEditor {
       // No clear root, arrange all nodes in a grid
       this.arrangeNodesInGrid(nodeArray);
       this.refreshCanvas();
+      if (container) container.classList.remove("no-transition");
       return;
     }
 
@@ -924,9 +930,18 @@ class BehaviorTreeEditor {
     this.refreshCanvas();
     this.updateAllConnectionsVisibility();
 
-    // Fit view after browser layout completes
+    // Fit view then re-update connections (transform change invalidates paths)
     requestAnimationFrame(() => {
       this.fitToView();
+      // Force reflow after transform change
+      void this.editor.precanvas.offsetHeight;
+      // Recalculate connection paths with new transform
+      const drawflowData = this.editor.drawflow.drawflow.Home.data;
+      Object.keys(drawflowData).forEach((nodeId) => {
+        this.editor.updateConnectionNodes(`node-${nodeId}`);
+      });
+      // Re-enable transitions
+      if (container) container.classList.remove("no-transition");
     });
   }
 

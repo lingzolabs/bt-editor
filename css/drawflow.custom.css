@@ -646,6 +646,14 @@
     transition: none !important;
 }
 
+/* 布局重排时禁用所有过渡，确保 getBoundingClientRect 立即获得最终位置 */
+.no-transition .drawflow-node,
+.no-transition .drawflow-node .input,
+.no-transition .drawflow-node .output,
+.no-transition .drawflow-node * {
+    transition: none !important;
+}
+
 /* 防止拖拽时文本选中 */
 .drawflow .drawflow-node * {
     user-select: none;
