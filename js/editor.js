@@ -156,8 +156,8 @@ class BehaviorTreeEditor {
    */
   showConnectionError() {
     // 触发全局消息显示
-    if (window.showMessage) {
-      window.showMessage("行为树节点的输入端口只能有一个连接", "error");
+    if (App && App.showMessage) {
+      App.showMessage("行为树节点的输入端口只能有一个连接", "error");
     }
   }
 

@@ -311,7 +311,7 @@ class BehaviorTree {
   }
 
   /**
-   * Generate HTML for node
+   * Generate HTML for node - delegates to editor's generateNodeHTML when available
    * @param {Object} treeNode - Tree node data
    * @param {Object} template - Node template
    * @returns {string} HTML string
@@ -322,9 +322,23 @@ class BehaviorTree {
         icon: "📦",
         name: treeNode.name,
         type: treeNode.type || NodeType.ACTION,
+        description: "",
+        ports: treeNode.ports ? Object.keys(treeNode.ports).map(k => ({ name: k, type_name: 'any', mode: 0 })) : null,
       };
     }
 
+    // Delegate to editor's generateNodeHTML if available (provides editable inputs)
+    if (App && App.editor && App.editor.generateNodeHTML) {
+      const nodeData = {
+        nodeType: treeNode.name,
+        status: treeNode.status || NodeStatus.IDLE,
+        ports: treeNode.ports || {},
+        collapsed: false,
+      };
+      return App.editor.generateNodeHTML(template, nodeData);
+    }
+
+    // Fallback (used only if called before editor init)
     let html = `
             <div class="drawflow-node-header">
                 <span class="node-icon">${template.icon}</span>
@@ -335,12 +349,10 @@ class BehaviorTree {
             <div class="drawflow-node-body">
         `;
 
-    // Add description
     if (template.description) {
       html += `<div class="node-description">${template.description}</div>`;
     }
 
-    // Add ports if exists
     if (treeNode.ports && Object.keys(treeNode.ports).length > 0) {
       html += '<ul class="node-ports-list">';
       for (let portName in treeNode.ports) {
