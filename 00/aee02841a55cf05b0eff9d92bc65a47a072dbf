@@ -1,0 +1,27 @@
+js/editor.js
+  s_698768c169e57e::t_771ea02cc8c526 1235
+  s_698768c169e57e::t_8b93f504e9e515 1127-1128,1155,1165-1167,1169-1172,1175-1176,1178-1179,1184,1200,1205-1207,1229
+  s_698768c169e57e::t_23661e44b0ef51 821,823
+  s_698768c169e57e::t_5b4f64637b992e 1145,1149-1150
+  s_698768c169e57e::t_867abb0b820cbd 927,930
+  s_698768c169e57e::t_12e035e9504b01 1124,1129-1130
+  s_698768c169e57e::t_9f9691ad8a4bea 1144,1146-1148,1151-1154,1180,1182-1183,1233,1238-1239,1243
+css/drawflow.custom.css
+  s_698768c169e57e::t_dc6867f7a7aa10 17-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "00aee02841a55cf05b0eff9d92bc65a47a072dbf",
+  "prompts": {},
+  "sessions": {
+    "s_698768c169e57e": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e2611-140e-74c9-8a25-64942b8d40db",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Albert Lv <altair.albert@gmail.com>"
+    }
+  }
+}
