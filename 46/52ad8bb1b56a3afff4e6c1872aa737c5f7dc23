@@ -1,0 +1,20 @@
+js/editor.js
+  s_698768c169e57e::t_b24321617d8d3c 927-928,930
+  s_698768c169e57e::t_6bad861c0910e2 1072,1075-1079
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "4652ad8bb1b56a3afff4e6c1872aa737c5f7dc23",
+  "prompts": {},
+  "sessions": {
+    "s_698768c169e57e": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e2611-140e-74c9-8a25-64942b8d40db",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Albert Lv <altair.albert@gmail.com>"
+    }
+  }
+}
