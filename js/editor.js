@@ -1073,7 +1073,10 @@ class BehaviorTreeEditor {
     this.updateAllConnectionsVisibility();
     this.reapplyCollapsedStates();
 
-    // Synchronously update all connection paths
+    // Force reflow so getBoundingClientRect reflects new positions
+    void this.editor.precanvas.offsetHeight;
+
+    // Update all connection paths after layout is current
     Object.keys(drawflowData).forEach((nodeId) => {
       this.editor.updateConnectionNodes(`node-${nodeId}`);
     });
