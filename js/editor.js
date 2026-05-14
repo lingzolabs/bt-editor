@@ -818,9 +818,9 @@ class BehaviorTreeEditor {
     const drawflowData = this.behaviorTree.convertFromTreeJSON(treeData);
     if (drawflowData) {
       this.import(drawflowData);
-      // Auto fit view after import to show all nodes
+      // Rearrange nodes to match current layout mode and fit view
       setTimeout(() => {
-        this.fitToView();
+        this.rearrangeNodes();
       }, 100);
     }
   }
@@ -924,10 +924,10 @@ class BehaviorTreeEditor {
     this.refreshCanvas();
     this.updateAllConnectionsVisibility();
 
-    // Fit view after rearrangement
+    // Fit view after refreshCanvas finishes (its internal timeout is 300ms)
     setTimeout(() => {
       this.fitToView();
-    }, 100);
+    }, 350);
   }
 
   /**
@@ -1101,7 +1101,6 @@ class BehaviorTreeEditor {
         this.editor.updateConnectionNodes(`node-${conn.outputNode}`);
         this.editor.updateConnectionNodes(`node-${conn.inputNode}`);
       });
-      this.editor.zoom_refresh();
     }, 300);
   }
 
@@ -1122,11 +1121,13 @@ class BehaviorTreeEditor {
   }
 
   /**
-   * Reset zoom
+   * Reset zoom to 1x and center all nodes in view
    */
   zoomReset() {
-    this.editor.zoom_reset();
-    this.editor.zoom_refresh();
+    this.editor.zoom = 1;
+    this.editor.zoom_last_value = 1;
+    // Center nodes at zoom 1
+    this.centerView();
   }
 
   /**
@@ -1140,41 +1141,47 @@ class BehaviorTreeEditor {
   }
 
   /**
-   * Center view
+   * Calculate canvas offset to center content at given zoom.
+   * With transform-origin: 0 0, screen position = pos * zoom + canvas_offset.
+   */
+  _calcCenterOffset(containerWidth, containerHeight, contentCenterX, contentCenterY, zoom) {
+    return {
+      x: containerWidth / 2 - contentCenterX * zoom,
+      y: containerHeight / 2 - contentCenterY * zoom,
+    };
+  }
+
+  /**
+   * Center view — keeps current zoom, pans so nodes are centered
    */
   centerView() {
-    // Get canvas dimensions
     const container = document.getElementById(this.containerId);
     if (!container) return;
 
-    const rect = container.getBoundingClientRect();
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-
-    // Calculate nodes center
     const nodes = this.getAllNodes();
     const nodeArray = Object.values(nodes);
-
     if (nodeArray.length === 0) return;
 
-    let sumX = 0;
-    let sumY = 0;
-
+    // Bounding box
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const nodeWidth = 250, nodeHeight = 150;
     nodeArray.forEach((node) => {
-      sumX += node.pos_x;
-      sumY += node.pos_y;
+      minX = Math.min(minX, node.pos_x);
+      minY = Math.min(minY, node.pos_y);
+      maxX = Math.max(maxX, node.pos_x + nodeWidth);
+      maxY = Math.max(maxY, node.pos_y + nodeHeight);
     });
 
-    const avgX = sumX / nodeArray.length;
-    const avgY = sumY / nodeArray.length;
+    const contentCenterX = (minX + maxX) / 2;
+    const contentCenterY = (minY + maxY) / 2;
 
-    // Calculate offset
-    const offsetX = centerX - avgX * this.editor.zoom;
-    const offsetY = centerY - avgY * this.editor.zoom;
+    const rect = container.getBoundingClientRect();
+    const zoom = this.editor.zoom;
+    const offset = this._calcCenterOffset(rect.width, rect.height, contentCenterX, contentCenterY, zoom);
 
-    // Apply offset
-    this.editor.canvas_x = offsetX;
-    this.editor.canvas_y = offsetY;
+    this.editor.canvas_x = offset.x;
+    this.editor.canvas_y = offset.y;
+    this.editor.zoom_last_value = zoom;
     this.editor.zoom_refresh();
   }
 
@@ -1190,23 +1197,14 @@ class BehaviorTreeEditor {
     const nodeArray = Object.values(nodes);
 
     if (nodeArray.length === 0) {
-      // No nodes, reset to center
-      this.editor.canvas_x = 0;
-      this.editor.canvas_y = 0;
-      this.editor.zoom = 1;
-      this.editor.zoom_last_value = 1;
-      this.editor.zoom_refresh();
+      this.zoomReset();
       return;
     }
 
     // Calculate bounding box of all nodes
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    const nodeWidth = 250; // Approximate node width
-    const nodeHeight = 150; // Approximate node height
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const nodeWidth = 250;
+    const nodeHeight = 150;
 
     nodeArray.forEach((node) => {
       minX = Math.min(minX, node.pos_x);
@@ -1215,13 +1213,11 @@ class BehaviorTreeEditor {
       maxY = Math.max(maxY, node.pos_y + nodeHeight);
     });
 
-    // Calculate center and size
     const contentWidth = maxX - minX;
     const contentHeight = maxY - minY;
     const contentCenterX = (minX + maxX) / 2;
     const contentCenterY = (minY + maxY) / 2;
 
-    // Calculate container size
     const rect = container.getBoundingClientRect();
     const containerWidth = rect.width;
     const containerHeight = rect.height;
@@ -1230,31 +1226,24 @@ class BehaviorTreeEditor {
     const padding = 100;
     const zoomX = (containerWidth - padding * 2) / contentWidth;
     const zoomY = (containerHeight - padding * 2) / contentHeight;
-    let zoom = Math.min(zoomX, zoomY, 1); // Don't zoom in beyond 1x
-
-    // Clamp zoom to reasonable range
+    let zoom = Math.min(zoomX, zoomY, 1);
     zoom = Math.max(0.1, Math.min(zoom, 2));
 
     // Calculate offset to center content
-    const offsetX = containerWidth / 2 - contentCenterX * zoom;
-    const offsetY = containerHeight / 2 - contentCenterY * zoom;
+    const offset = this._calcCenterOffset(containerWidth, containerHeight, contentCenterX, contentCenterY, zoom);
 
-    // Apply zoom and offset
+    // Apply zoom and position
     this.editor.zoom = zoom;
     this.editor.zoom_last_value = zoom;
-    this.editor.canvas_x = offsetX;
-    this.editor.canvas_y = offsetY;
+    this.editor.canvas_x = offset.x;
+    this.editor.canvas_y = offset.y;
     this.editor.zoom_refresh();
 
     console.log(
-      `Fit to view: zoom=${zoom.toFixed(2)}, offset=(${offsetX.toFixed(0)}, ${offsetY.toFixed(0)})`,
+      `Fit to view: zoom=${zoom.toFixed(2)}, offset=(${offset.x.toFixed(0)}, ${offset.y.toFixed(0)})`,
     );
   }
 
-  /**
-   * Select node
-   * @param {number} nodeId - Node ID
-   */
   selectNode(nodeId) {
     this.selectedNodes.add(nodeId);
     const nodeElement = document.getElementById(`node-${nodeId}`);
