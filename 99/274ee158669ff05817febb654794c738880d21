@@ -1,0 +1,33 @@
+css/main.css
+  s_f3376b9b972740::t_bb617a3397a604 762,766,770
+  s_f3376b9b972740::t_3bd4b09c8478f5 533-761,763-765,767-769,771-772
+ARCHITECTURE.md
+  s_f3376b9b972740::t_999ffed461f217 5,13
+js/main.js
+  s_f3376b9b972740::t_0d40d0e0f51715 984,994-1003,1010-1015,1039
+  s_f3376b9b972740::t_c6b51e182b76ea 803-978,980-981,1004,1006-1007,1016-1038,1040-1074,1139-1301
+  s_f3376b9b972740::t_664c42b40296a1 1075-1138
+  s_f3376b9b972740::t_4523df15dce943 8-13,51-52
+css/drawflow.custom.css
+  s_f3376b9b972740::t_ce4b659a83427e 704-783
+server.js
+  s_f3376b9b972740::t_110285fd6bb86a 7-9,15,25-85,112
+index.html
+  s_f3376b9b972740::t_2673801159574e 26-31,189-235,406-407
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "99274ee158669ff05817febb654794c738880d21",
+  "prompts": {},
+  "sessions": {
+    "s_f3376b9b972740": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e25ea-f1cb-743d-b9d1-e09f7a8f1db5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Albert Lv <altair.albert@gmail.com>"
+    }
+  }
+}
