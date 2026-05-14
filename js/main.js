@@ -5,6 +5,12 @@
 
 // Global editor instance
 let editor = null;
+let logPlayer = null;
+let wsViewer = null;
+
+// Replay state
+let replayNidMap = new Map(); // nid -> drawflow node ID
+let isReplayMode = false;
 
 // Initialize application when DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
@@ -41,6 +47,9 @@ function initializeApplication() {
 
   // Setup canvas panning with spacebar
   setupCanvasPanning();
+
+  // Setup replay panel
+  setupReplayPanel();
 
   showMessage("编辑器已就绪");
   console.log("Application initialized successfully");
@@ -791,3 +800,502 @@ document.addEventListener("mousemove", (e) => {
     cursorPos.textContent = `X: ${e.clientX}, Y: ${e.clientY}`;
   }
 });
+
+// ============================================================
+// REPLAY PANEL & WEBSOCKET VIEWER
+// ============================================================
+
+/**
+ * Setup replay panel and all related event handlers
+ */
+function setupReplayPanel() {
+  // Initialize LogPlayer
+  logPlayer = new LogPlayer();
+  wsViewer = new WSViewer();
+
+  // Panel toggle buttons
+  document.getElementById('btn-replay-toggle')?.addEventListener('click', toggleReplayPanel);
+  document.getElementById('btn-close-replay')?.addEventListener('click', toggleReplayPanel);
+
+  // File input
+  document.getElementById('replay-file-input')?.addEventListener('change', handleReplayFileLoad);
+  document.getElementById('btn-load-example')?.addEventListener('click', handleLoadExample);
+
+  // Playback controls
+  document.getElementById('btn-replay-play')?.addEventListener('click', handleReplayPlayPause);
+  document.getElementById('btn-replay-stop')?.addEventListener('click', handleReplayStop);
+  document.getElementById('btn-replay-step-fwd')?.addEventListener('click', handleReplayStepFwd);
+  document.getElementById('btn-replay-step-back')?.addEventListener('click', handleReplayStepBack);
+  document.getElementById('tick-slider')?.addEventListener('input', handleTickSliderChange);
+  document.getElementById('speed-select')?.addEventListener('change', handleSpeedChange);
+
+  // WebSocket
+  document.getElementById('btn-ws-connect')?.addEventListener('click', handleWSConnect);
+
+  // LogPlayer callbacks
+  logPlayer.onTickChange = (tick, events) => {
+    applyTickState(tick);
+  };
+
+  logPlayer.onStateChange = (state) => {
+    updateReplayUI(state);
+  };
+
+  logPlayer.onLoaded = (treeDef) => {
+    if (treeDef) {
+      loadTreeForReplay(treeDef);
+    }
+  };
+
+  // WSViewer callbacks
+  wsViewer.onEvent = (event) => {
+    handleWSEvent(event);
+  };
+
+  wsViewer.onStateChange = (state) => {
+    updateWSStatus(state);
+  };
+}
+
+/**
+ * Toggle replay panel visibility
+ */
+function toggleReplayPanel() {
+  const panel = document.getElementById('replay-panel');
+  if (panel) {
+    panel.classList.toggle('collapsed');
+  }
+}
+
+/**
+ * Handle file load for replay
+ */
+function handleReplayFileLoad(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const text = event.target.result;
+    logPlayer.load(text);
+    showMessage(`日志加载成功: ${logPlayer.getTickCount()} ticks`, 'success');
+  };
+  reader.readAsText(file);
+}
+
+/**
+ * Handle load example log
+ */
+async function handleLoadExample() {
+  try {
+    showMessage('正在加载示例日志...');
+    const response = await fetch('/api/logs/bt_log.jsonl');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const text = await response.text();
+    logPlayer.load(text);
+    showMessage(`示例日志加载成功: ${logPlayer.getTickCount()} ticks`, 'success');
+  } catch (error) {
+    showMessage('加载示例失败: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Load tree definition for replay mode
+ * Registers node templates dynamically and imports the tree
+ */
+function loadTreeForReplay(treeDef) {
+  isReplayMode = true;
+
+  // Register node types from tree that aren't in templates
+  registerTreeNodeTypes(treeDef.root);
+
+  // Import tree into editor
+  editor.importBehaviorTree(treeDef);
+
+  // Build nid -> drawflow node ID mapping
+  replayNidMap.clear();
+  buildNidMapFromTree(treeDef.root, replayNidMap);
+
+  // Expand all nodes for visibility
+  expandAllNodes();
+
+  // Reset all node visual states
+  resetAllNodeVisuals();
+
+  updateHintVisibility();
+  showMessage(`树已加载: ${replayNidMap.size} 个节点`, 'success');
+}
+
+/**
+ * Register node types from tree definition that don't exist in templates
+ */
+function registerTreeNodeTypes(node) {
+  if (!node) return;
+
+  if (!nodeTemplates.hasTemplate(node.name)) {
+    nodeTemplates.addTemplate({
+      name: node.name,
+      type: node.type !== undefined ? node.type : NodeType.ACTION,
+      description: node.name,
+      icon: nodeTemplates.getIconForType(node.type !== undefined ? node.type : NodeType.ACTION),
+      ports: node.ports ? Object.keys(node.ports).map(k => ({ name: k, type_name: 'any', mode: 0 })) : null,
+    });
+  }
+
+  if (node.children) {
+    for (const child of node.children) {
+      registerTreeNodeTypes(child);
+    }
+  }
+}
+
+/**
+ * Build nid -> drawflow node ID mapping via DFS pre-order traversal
+ * Drawflow assigns IDs starting from 1 in DFS order during import
+ */
+function buildNidMapFromTree(root, map) {
+  let counter = 0;
+
+  function dfs(node) {
+    const nid = counter;
+    const drawflowId = counter + 1;
+    map.set(nid, drawflowId);
+    counter++;
+
+    if (node.children) {
+      for (const child of node.children) {
+        dfs(child);
+      }
+    }
+  }
+
+  dfs(root);
+}
+
+/**
+ * Apply state at a specific tick - updates all node visuals
+ * Uses incremental update for sequential play, full rebuild for seeking
+ */
+function applyTickState(tick) {
+  const prevTick = logPlayer._prevAppliedTick ?? 0;
+  let transitions;
+  let runningNodeIds = []; // Track currently running nodes for focus
+
+  if (tick === prevTick + 1) {
+    // Sequential: apply only this tick's transitions (fast)
+    transitions = logPlayer.applyTickTransitions(tick);
+    // Update only changed nodes
+    for (const tr of transitions) {
+      const drawflowId = replayNidMap.get(tr.nid);
+      if (drawflowId == null) continue;
+      updateNodeReplayVisual(drawflowId, tr.statusInt);
+      if (tr.statusInt === 1) runningNodeIds.push(drawflowId); // Running
+    }
+  } else {
+    // Seeking: rebuild full state
+    const states = logPlayer.getStateAtTick(tick);
+    for (const [nid, status] of states) {
+      const drawflowId = replayNidMap.get(nid);
+      if (drawflowId == null) continue;
+      updateNodeReplayVisual(drawflowId, status);
+      if (status === 1) runningNodeIds.push(drawflowId);
+    }
+    transitions = [];
+  }
+
+  logPlayer._prevAppliedTick = tick;
+
+  // Auto-focus on the deepest running node (last in DFS = deepest leaf)
+  if (runningNodeIds.length > 0) {
+    const focusTarget = runningNodeIds[runningNodeIds.length - 1];
+    smoothFocusNode(focusTarget);
+  }
+
+  // Update info display
+  const result = logPlayer.getTickResult(tick);
+  const infoEl = document.getElementById('replay-tick-info');
+  if (infoEl) {
+    let resultHtml = '';
+    if (result) {
+      const cls = `result-${result.toLowerCase()}`;
+      resultHtml = ` | 结果: <span class="${cls}">${result}</span>`;
+    }
+    infoEl.innerHTML = `Tick ${tick} / ${logPlayer.maxTick}${resultHtml}`;
+  }
+}
+
+/**
+ * Update a single node's visual state for replay
+ */
+function updateNodeReplayVisual(drawflowId, status) {
+  const nodeEl = document.getElementById(`node-${drawflowId}`);
+  if (!nodeEl) return;
+
+  // Remove all replay status classes
+  nodeEl.classList.remove('replay-idle', 'replay-running', 'replay-success', 'replay-failure');
+
+  // Add current status class (CSS handles all visual changes)
+  switch (status) {
+    case 0: nodeEl.classList.add('replay-idle'); break;
+    case 1: nodeEl.classList.add('replay-running'); break;
+    case 2: nodeEl.classList.add('replay-success'); break;
+    case 3: nodeEl.classList.add('replay-failure'); break;
+  }
+}
+
+/**
+ * Flash animation on node status transition
+ */
+function flashNode(drawflowId, status) {
+  const nodeEl = document.getElementById(`node-${drawflowId}`);
+  if (!nodeEl) return;
+
+  // Remove any existing flash classes
+  nodeEl.classList.remove('replay-flash-running', 'replay-flash-success', 'replay-flash-failure');
+
+  // Force reflow to restart animation
+  void nodeEl.offsetWidth;
+
+  // Add flash class based on status
+  switch (status) {
+    case 1: nodeEl.classList.add('replay-flash-running'); break;
+    case 2: nodeEl.classList.add('replay-flash-success'); break;
+    case 3: nodeEl.classList.add('replay-flash-failure'); break;
+  }
+
+  // Remove flash class after animation
+  setTimeout(() => {
+    nodeEl.classList.remove('replay-flash-running', 'replay-flash-success', 'replay-flash-failure');
+  }, 500);
+}
+
+/**
+ * Smoothly pan the canvas to focus on a specific node.
+ * Only moves if the node is outside the visible area (with margin).
+ * Uses CSS transition for smooth movement, avoids jitter.
+ */
+let _focusAnimFrame = null;
+let _lastFocusTarget = null;
+
+function smoothFocusNode(drawflowId) {
+  // Debounce: don't focus same node repeatedly
+  if (_lastFocusTarget === drawflowId) return;
+  _lastFocusTarget = drawflowId;
+
+  if (_focusAnimFrame) cancelAnimationFrame(_focusAnimFrame);
+  _focusAnimFrame = requestAnimationFrame(() => {
+    _focusAnimFrame = null;
+    _doFocusNode(drawflowId);
+  });
+}
+
+function _doFocusNode(drawflowId) {
+  const container = document.getElementById('drawflow');
+  if (!container || !editor || !editor.editor) return;
+
+  const nodeData = editor.editor.drawflow?.drawflow?.Home?.data?.[drawflowId];
+  if (!nodeData) return;
+
+  const zoom = editor.editor.zoom;
+  const containerRect = container.getBoundingClientRect();
+  const cw = containerRect.width;
+  const ch = containerRect.height;
+
+  // Node center in canvas coords
+  const nodeW = 240; // approximate
+  const nodeH = 100;
+  const nodeCX = nodeData.pos_x + nodeW / 2;
+  const nodeCY = nodeData.pos_y + nodeH / 2;
+
+  // Node center in screen coords
+  const screenX = nodeCX * zoom + editor.editor.canvas_x;
+  const screenY = nodeCY * zoom + editor.editor.canvas_y;
+
+  // Check if node is already visible (with 20% margin)
+  const marginX = cw * 0.2;
+  const marginY = ch * 0.2;
+  if (screenX > marginX && screenX < cw - marginX &&
+      screenY > marginY && screenY < ch - marginY) {
+    return; // Already in view, don't move
+  }
+
+  // Target: center the node in the viewport
+  const targetCanvasX = cw / 2 - nodeCX * zoom;
+  const targetCanvasY = ch / 2 - nodeCY * zoom;
+
+  // Smooth interpolation (lerp toward target)
+  const lerp = 0.35;
+  const newX = editor.editor.canvas_x + (targetCanvasX - editor.editor.canvas_x) * lerp;
+  const newY = editor.editor.canvas_y + (targetCanvasY - editor.editor.canvas_y) * lerp;
+
+  editor.editor.canvas_x = newX;
+  editor.editor.canvas_y = newY;
+  editor.editor.zoom_refresh();
+}
+
+/**
+ * Reset all node visual states to idle
+ */
+function resetAllNodeVisuals() {
+  const nodes = editor.getAllNodes();
+  Object.keys(nodes).forEach(nodeId => {
+    const nodeEl = document.getElementById(`node-${nodeId}`);
+    if (nodeEl) {
+      nodeEl.classList.remove('replay-idle', 'replay-running', 'replay-success', 'replay-failure');
+      nodeEl.classList.remove('replay-flash-running', 'replay-flash-success', 'replay-flash-failure');
+      nodeEl.classList.add('replay-idle');
+    }
+  });
+}
+
+/**
+ * Update replay UI elements based on player state
+ */
+function updateReplayUI(state) {
+  const playBtn = document.getElementById('btn-replay-play');
+  const slider = document.getElementById('tick-slider');
+  const tickLabel = document.getElementById('tick-label');
+
+  if (playBtn) {
+    playBtn.textContent = state.isPlaying ? '⏸' : '▶';
+    playBtn.title = state.isPlaying ? '暂停' : '播放';
+  }
+
+  if (slider) {
+    slider.max = state.maxTick;
+    slider.value = state.currentTick;
+  }
+
+  if (tickLabel) {
+    tickLabel.textContent = `Tick: ${state.currentTick}/${state.maxTick}`;
+  }
+}
+
+// Playback control handlers
+function handleReplayPlayPause() {
+  if (!logPlayer.isLoaded()) {
+    showMessage('请先加载日志文件', 'warning');
+    return;
+  }
+  if (logPlayer.isPlaying) {
+    logPlayer.pause();
+  } else {
+    logPlayer.play();
+  }
+}
+
+function handleReplayStop() {
+  logPlayer.stop();
+  resetAllNodeVisuals();
+}
+
+function handleReplayStepFwd() {
+  if (!logPlayer.isLoaded()) return;
+  logPlayer.stepForward();
+}
+
+function handleReplayStepBack() {
+  if (!logPlayer.isLoaded()) return;
+  logPlayer.stepBackward();
+}
+
+function handleTickSliderChange(e) {
+  const tick = parseInt(e.target.value);
+  logPlayer.seekToTick(tick);
+}
+
+function handleSpeedChange(e) {
+  const speed = parseFloat(e.target.value);
+  logPlayer.setSpeed(speed);
+}
+
+// ============================================================
+// WEBSOCKET VIEWER
+// ============================================================
+
+/**
+ * Handle WS connect/disconnect button
+ */
+function handleWSConnect() {
+  const urlInput = document.getElementById('ws-url');
+  const btn = document.getElementById('btn-ws-connect');
+
+  if (wsViewer.getIsConnected()) {
+    wsViewer.disconnect();
+    btn.textContent = '连接';
+  } else {
+    const url = urlInput.value.trim();
+    if (!url) {
+      showMessage('请输入 WebSocket URL', 'warning');
+      return;
+    }
+    wsViewer.autoReconnect = true;
+    wsViewer.connect(url);
+    btn.textContent = '断开';
+  }
+}
+
+/**
+ * Handle incoming WebSocket events (same format as log file)
+ */
+function handleWSEvent(event) {
+  switch (event.type) {
+    case 'tree':
+      // Full tree definition received - load it
+      loadTreeForReplay(event.data);
+      logPlayer.treeDefinition = event.data;
+      logPlayer.buildNidMapping(event.data.root);
+      break;
+
+    case 'tick_begin':
+      // Reset nodes to idle at start of new tick (only nodes that were success/failure)
+      break;
+
+    case 'transition':
+      // Live update node status
+      const drawflowId = replayNidMap.get(event.nid);
+      if (drawflowId != null) {
+        const status = LogPlayer.parseStatus(event.to);
+        updateNodeReplayVisual(drawflowId, status);
+        flashNode(drawflowId, status);
+      }
+      break;
+
+    case 'tick_end':
+      // Update info display
+      const infoEl = document.getElementById('replay-tick-info');
+      if (infoEl) {
+        const cls = `result-${event.result.toLowerCase()}`;
+        infoEl.innerHTML = `[Live] Tick ${event.tick} | 结果: <span class="${cls}">${event.result}</span>`;
+      }
+      break;
+  }
+}
+
+/**
+ * Update WebSocket status indicator
+ */
+function updateWSStatus(state) {
+  const statusEl = document.getElementById('ws-status');
+  const btn = document.getElementById('btn-ws-connect');
+
+  if (statusEl) {
+    if (state.isConnected) {
+      statusEl.textContent = '● 已连接';
+      statusEl.className = 'ws-status connected';
+    } else {
+      statusEl.textContent = '● 未连接';
+      statusEl.className = 'ws-status disconnected';
+    }
+  }
+
+  if (btn) {
+    btn.textContent = state.isConnected ? '断开' : '连接';
+  }
+
+  if (state.isConnected) {
+    showMessage('WebSocket 已连接', 'success');
+  }
+}

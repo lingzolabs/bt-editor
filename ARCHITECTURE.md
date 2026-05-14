@@ -2,7 +2,7 @@
 
 ## 概述
 
-行为树编辑器是一个基于 Drawflow 的可视化行为树编辑工具，采用纯前端架构，使用原生 JavaScript 实现。
+行为树编辑器是一个基于 Drawflow 的可视化行为树编辑工具，采用纯前端架构，使用原生 JavaScript 实现。支持行为树的可视化编辑、JSONL 日志回放查看执行过程、以及 WebSocket 实时在线查看。
 
 ## 技术栈
 
@@ -10,7 +10,7 @@
 - **CSS3**: 样式和布局（CSS Variables, Flexbox, Grid）
 - **JavaScript ES6+**: 应用逻辑
 - **Drawflow**: 可视化节点编辑器核心库
-- **Node.js**: 开发服务器（可选）
+- **Node.js**: 开发服务器（含日志文件 API）
 
 ## 架构设计
 

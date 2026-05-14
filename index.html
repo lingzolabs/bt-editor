@@ -23,6 +23,13 @@
             </div>
             <div class="header-right">
                 <button
+                    id="btn-replay-toggle"
+                    class="btn btn-secondary"
+                    title="日志回放面板"
+                >
+                    <span>📊</span> 回放
+                </button>
+                <button
                     id="btn-clear"
                     class="btn btn-secondary"
                     title="清空画布"
@@ -177,6 +184,53 @@
                     </div>
                 </div>
             </main>
+        </div>
+
+        <!-- Replay Panel -->
+        <div id="replay-panel" class="replay-panel collapsed">
+            <div class="replay-panel-header">
+                <h3>📊 日志回放</h3>
+                <button id="btn-close-replay" class="btn-icon" title="关闭回放面板">✕</button>
+            </div>
+            <div class="replay-panel-body">
+                <!-- File loading -->
+                <div class="replay-section">
+                    <label class="replay-label">加载日志:</label>
+                    <div class="replay-file-row">
+                        <input type="file" id="replay-file-input" accept=".jsonl" />
+                        <button id="btn-load-example" class="btn btn-secondary btn-sm">加载示例</button>
+                    </div>
+                </div>
+                <!-- WS Connect -->
+                <div class="replay-section">
+                    <label class="replay-label">WebSocket:</label>
+                    <div class="replay-ws-row">
+                        <input type="text" id="ws-url" value="ws://localhost:3001" placeholder="ws://host:port" />
+                        <button id="btn-ws-connect" class="btn btn-secondary btn-sm">连接</button>
+                        <span id="ws-status" class="ws-status disconnected">● 未连接</span>
+                    </div>
+                </div>
+                <!-- Playback controls -->
+                <div class="replay-section replay-controls">
+                    <button id="btn-replay-stop" class="btn-icon" title="停止">⏹</button>
+                    <button id="btn-replay-step-back" class="btn-icon" title="上一步">⏮</button>
+                    <button id="btn-replay-play" class="btn-icon btn-play" title="播放/暂停">▶</button>
+                    <button id="btn-replay-step-fwd" class="btn-icon" title="下一步">⏭</button>
+                    <input type="range" id="tick-slider" min="0" max="0" value="0" class="tick-slider" />
+                    <span id="tick-label" class="tick-label">Tick: 0/0</span>
+                    <select id="speed-select" class="speed-select">
+                        <option value="0.5">0.5x</option>
+                        <option value="1" selected>1x</option>
+                        <option value="2">2x</option>
+                        <option value="5">5x</option>
+                        <option value="10">10x</option>
+                    </select>
+                </div>
+                <!-- Info display -->
+                <div class="replay-section replay-info">
+                    <span id="replay-tick-info">就绪 - 请加载日志文件</span>
+                </div>
+            </div>
         </div>
 
         <!-- Status Bar -->
@@ -349,6 +403,8 @@
         <script src="js/nodeTemplates.js"></script>
         <script src="js/behaviorTree.js"></script>
         <script src="js/editor.js"></script>
+        <script src="js/logPlayer.js"></script>
+        <script src="js/wsViewer.js"></script>
         <script src="js/main.js"></script>
     </body>
 </html>

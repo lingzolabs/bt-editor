@@ -700,3 +700,85 @@
     max-width: 100%;
     overflow: hidden;
 }
+
+/* ========== Replay Status — Whole-Node Visual Override ========== */
+
+/* Idle: dim the node to make active nodes stand out */
+.drawflow-node.replay-idle {
+    opacity: 0.45;
+    filter: saturate(0.3);
+    border-color: #555 !important;
+    transition: opacity 0.3s, filter 0.3s, border-color 0.3s, box-shadow 0.3s, background 0.3s;
+}
+
+/* Running: vivid blue glow + full opacity */
+.drawflow-node.replay-running {
+    opacity: 1;
+    filter: none;
+    border: 2.5px solid #42a5f5 !important;
+    background: linear-gradient(135deg, #1a237e 0%, #1e3a5f 100%) !important;
+    box-shadow: 0 0 18px 4px rgba(66, 165, 245, 0.55), inset 0 0 8px rgba(66, 165, 245, 0.15);
+    animation: replayPulse 1.4s ease-in-out infinite;
+    transition: opacity 0.2s, filter 0.2s, border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+/* Success: green fill */
+.drawflow-node.replay-success {
+    opacity: 1;
+    filter: none;
+    border: 2.5px solid #66bb6a !important;
+    background: linear-gradient(135deg, #1b3d1e 0%, #2e4a30 100%) !important;
+    box-shadow: 0 0 12px 2px rgba(102, 187, 106, 0.45);
+    transition: opacity 0.3s, filter 0.3s, border-color 0.3s, box-shadow 0.3s, background 0.3s;
+}
+
+/* Failure: red fill */
+.drawflow-node.replay-failure {
+    opacity: 1;
+    filter: none;
+    border: 2.5px solid #ef5350 !important;
+    background: linear-gradient(135deg, #4a1414 0%, #5c2020 100%) !important;
+    box-shadow: 0 0 12px 2px rgba(239, 83, 80, 0.45);
+    transition: opacity 0.3s, filter 0.3s, border-color 0.3s, box-shadow 0.3s, background 0.3s;
+}
+
+/* Header overrides — keep header legible on new backgrounds */
+.drawflow-node.replay-running .drawflow-node-header {
+    background: rgba(33, 150, 243, 0.25) !important;
+}
+.drawflow-node.replay-success .drawflow-node-header {
+    background: rgba(76, 175, 80, 0.25) !important;
+}
+.drawflow-node.replay-failure .drawflow-node-header {
+    background: rgba(244, 67, 54, 0.25) !important;
+}
+
+/* Pulsing glow for running nodes */
+@keyframes replayPulse {
+    0%, 100% {
+        box-shadow: 0 0 18px 4px rgba(66, 165, 245, 0.55), inset 0 0 8px rgba(66, 165, 245, 0.15);
+    }
+    50% {
+        box-shadow: 0 0 30px 8px rgba(66, 165, 245, 0.75), inset 0 0 12px rgba(66, 165, 245, 0.25);
+    }
+}
+
+/* Status dot: bigger + glow */
+.replay-running .node-status {
+    width: 14px !important;
+    height: 14px !important;
+    background-color: #42a5f5 !important;
+    box-shadow: 0 0 8px #42a5f5;
+}
+.replay-success .node-status {
+    width: 14px !important;
+    height: 14px !important;
+    background-color: #66bb6a !important;
+    box-shadow: 0 0 8px #66bb6a;
+}
+.replay-failure .node-status {
+    width: 14px !important;
+    height: 14px !important;
+    background-color: #ef5350 !important;
+    box-shadow: 0 0 8px #ef5350;
+}

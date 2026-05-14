@@ -799,7 +799,6 @@ class BehaviorTreeEditor {
     });
     this.updateNodeCount();
     this.applyLayoutMode();
-    this.rearrangeNodes();
   }
 
   /**
@@ -944,7 +943,21 @@ class BehaviorTreeEditor {
   }
 
   /**
+   * Calculate subtree width (in number of leaf nodes) for a drawflow node
+   */
+  calculateSubtreeWidth(node) {
+    const children = this.getChildNodes(node);
+    if (children.length === 0) return 1;
+    let width = 0;
+    for (const child of children) {
+      width += this.calculateSubtreeWidth(child);
+    }
+    return width;
+  }
+
+  /**
    * Arrange tree structure from a node recursively
+   * Uses subtree-width-aware spacing to prevent overlap
    */
   arrangeTreeFromNode(node, x, y, depth) {
     // Update node position in Drawflow's internal data structure
@@ -959,25 +972,35 @@ class BehaviorTreeEditor {
 
     if (children.length === 0) return;
 
+    // Calculate subtree widths for each child
+    const childWidths = children.map(c => this.calculateSubtreeWidth(c));
+    const totalLeaves = childWidths.reduce((a, b) => a + b, 0);
+
     if (this.layoutMode === "vertical") {
       // Vertical layout: children below parent
-      const childY = y + 200; // Vertical spacing
-      const totalWidth = children.length * 300; // Horizontal spacing per child
-      const startX = x - totalWidth / 2 + 150; // Center children under parent
+      const childY = y + 200;
+      const leafSpacing = 300; // px per leaf node
+      const totalWidth = totalLeaves * leafSpacing;
+      let currentX = x - totalWidth / 2;
 
       children.forEach((child, index) => {
-        const childX = startX + index * 300;
-        this.arrangeTreeFromNode(child, childX, childY, depth + 1);
+        const childWidth = childWidths[index] * leafSpacing;
+        const childCenterX = currentX + childWidth / 2;
+        this.arrangeTreeFromNode(child, childCenterX, childY, depth + 1);
+        currentX += childWidth;
       });
     } else {
       // Horizontal layout: children to the right of parent
-      const childX = x + 350; // Horizontal spacing
-      const totalHeight = children.length * 200; // Vertical spacing per child
-      const startY = y - totalHeight / 2 + 100; // Center children beside parent
+      const childX = x + 350;
+      const leafSpacing = 200; // px per leaf node
+      const totalHeight = totalLeaves * leafSpacing;
+      let currentY = y - totalHeight / 2;
 
       children.forEach((child, index) => {
-        const childY = startY + index * 200;
-        this.arrangeTreeFromNode(child, childX, childY, depth + 1);
+        const childHeight = childWidths[index] * leafSpacing;
+        const childCenterY = currentY + childHeight / 2;
+        this.arrangeTreeFromNode(child, childX, childCenterY, depth + 1);
+        currentY += childHeight;
       });
     }
   }
