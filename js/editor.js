@@ -924,10 +924,10 @@ class BehaviorTreeEditor {
     this.refreshCanvas();
     this.updateAllConnectionsVisibility();
 
-    // Fit view after refreshCanvas finishes (its internal timeout is 300ms)
-    setTimeout(() => {
+    // Fit view after browser layout completes
+    requestAnimationFrame(() => {
       this.fitToView();
-    }, 350);
+    });
   }
 
   /**
@@ -1064,44 +1064,19 @@ class BehaviorTreeEditor {
       const nodeElement = document.getElementById(`node-${nodeId}`);
 
       if (nodeElement && node) {
-        // Update node position in DOM
         nodeElement.style.left = node.pos_x + "px";
         nodeElement.style.top = node.pos_y + "px";
       }
     });
 
-    // Clear and redraw all connections
-    // First, collect all connections
-    const allConnections = [];
-    Object.keys(drawflowData).forEach((nodeId) => {
-      const node = drawflowData[nodeId];
-      if (node.outputs) {
-        Object.keys(node.outputs).forEach((outputKey) => {
-          const output = node.outputs[outputKey];
-          if (output.connections && output.connections.length > 0) {
-            output.connections.forEach((conn) => {
-              allConnections.push({
-                outputNode: nodeId,
-                outputClass: outputKey,
-                inputNode: conn.node,
-                inputClass: conn.output,
-              });
-            });
-          }
-        });
-      }
-    });
-
-    // Update connections visibility based on node visibility
+    // Update connections visibility and collapsed states
     this.updateAllConnectionsVisibility();
     this.reapplyCollapsedStates();
-    setTimeout(() => {
-      // Update connection positions for all connections
-      allConnections.forEach((conn) => {
-        this.editor.updateConnectionNodes(`node-${conn.outputNode}`);
-        this.editor.updateConnectionNodes(`node-${conn.inputNode}`);
-      });
-    }, 300);
+
+    // Synchronously update all connection paths
+    Object.keys(drawflowData).forEach((nodeId) => {
+      this.editor.updateConnectionNodes(`node-${nodeId}`);
+    });
   }
 
   /**
