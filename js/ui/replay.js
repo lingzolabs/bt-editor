@@ -91,7 +91,7 @@ class ReplayController {
   async handleLoadExample() {
     try {
       App.showMessage('正在加载示例日志...');
-      const response = await fetch('/api/logs/bt_log.jsonl');
+      const response = await fetch('examples/bt_log.jsonl');
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }

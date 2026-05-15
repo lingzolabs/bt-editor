@@ -1,253 +1,110 @@
-# 行为树编辑器 (Behavior Tree Editor)
+# 🌲 Behavior Tree Editor
 
-基于 Drawflow 实现的可视化行为树编辑和调试工具。
+可视化行为树编辑器与调试工具，基于 [Drawflow](https://github.com/jerosoler/Drawflow) 构建。
 
-## 功能特性
+**[🔗 在线体验 (GitHub Pages)](https://lingzolabs.github.io/bt-editor/)**
 
-✨ **可视化编辑**
-- 拖拽式节点创建
-- 可视化连接管理
-- 实时预览
+![MIT License](https://img.shields.io/badge/license-MIT-green)
 
-🌲 **完整的行为树支持**
-- 组合节点 (Composite): Sequence, Selector, Parallel 等
-- 动作节点 (Action): 叶子节点，执行具体动作
-- 装饰器节点 (Decorator): Inverter, Repeater, Delay 等
+## ✨ 功能特性
 
-📊 **导入导出**
-- 导出标准 JSON 格式的行为树
-- 导出节点定义配置
-- 支持从 JSON 导入树结构
-- 支持自定义节点库导入
+### 可视化编辑
+- 拖拽式创建节点，可视化连接
+- 支持左右/上下两种布局切换
+- 画布缩放、平移、自动适应视图
+- 复制粘贴、键盘快捷键
 
-🎨 **现代化界面**
-- 暗色主题设计
-- 响应式布局
-- 直观的操作体验
+### 行为树节点
+- **组合节点** (紫色): Sequence、Selector、Parallel、RandomSelector、RandomSequence
+- **动作节点** (蓝色): AlwaysSuccess、AlwaysFailure、Wait、Log 等
+- **装饰器节点** (橙色): Inverter、Repeater、Delay、Timeout 等
+- 支持运行时添加**自定义节点**，可配置端口参数
 
-⚙️ **强大的编辑功能**
-- 缩放和平移画布
-- 复制粘贴节点
-- 键盘快捷键支持
-- 自定义节点创建
+### 导入导出
+- 导出标准 JSON 格式的行为树结构和节点定义
+- 从 JSON 导入行为树或自定义节点库
+- 一键复制到剪贴板或下载文件
+
+### 🎮 日志回放与实时调试
+- 加载 `.jsonl` 日志文件，逐帧回放行为树执行过程
+- 节点状态实时着色（空闲/运行中/成功/失败）
+- 播放/暂停/单步前进/单步后退控制
+- 支持 WebSocket 实时连接，接收运行中的行为树状态
+
+## 快速开始
+
+### 在线使用
+
+直接访问 **[GitHub Pages](https://lingzolabs.github.io/bt-editor/)** 即可使用，无需安装。
+
+### 本地运行
+
+```bash
+git clone https://github.com/lingzolabs/bt-editor.git
+cd bt-editor
+npm install
+npm start
+# 打开 http://localhost:3000
+```
+
+本地模式额外支持从 `logs/` 目录加载日志文件的 API。
+
+## 使用说明
+
+### 创建节点
+从左侧面板拖拽节点到画布，从父节点输出点拖拽到子节点输入点建立连接。
+
+### 键盘快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| `Ctrl+S` | 导出 |
+| `Ctrl+C / V` | 复制/粘贴节点 |
+| `Delete` | 删除选中 |
+| `Esc` | 取消选择 |
+
+### 日志回放
+
+1. 点击工具栏的回放按钮打开回放面板
+2. 加载 `.jsonl` 日志文件（或点击"加载示例"）
+3. 使用播放控制逐帧查看行为树执行过程
+
+### 日志格式
+
+回放日志为 [JSONL](https://jsonlines.org/) 格式，每行一个 JSON 对象。示例见 `examples/bt_log.jsonl`。
 
 ## 项目结构
 
 ```
-behaviortree_editor/
-├── index.html              # 主 HTML 文件
-├── server.js               # 简单的本地开发服务器
-├── package.json            # Node.js 项目配置
-├── css/                    # 样式文件
-│   ├── main.css           # 主样式
-│   └── drawflow.custom.css # Drawflow 自定义样式
-├── js/                     # JavaScript 文件
-│   ├── nodeTemplates.js   # 节点模板定义
-│   ├── behaviorTree.js    # 行为树数据结构转换
-│   ├── editor.js          # 编辑器核心逻辑
-│   └── main.js            # 主应用入口
-└── examples/               # 示例文件
-    ├── sample_tree.json   # 示例行为树
-    └── sample_nodes.json  # 示例节点定义
+├── index.html                # 主页面
+├── server.js                 # 本地开发服务器
+├── css/                      # 样式
+│   ├── main.css
+│   └── drawflow.custom.css
+├── js/                       # 核心逻辑
+│   ├── main.js              # 应用入口
+│   ├── app.js               # 全局状态
+│   ├── editor.js            # 编辑器核心
+│   ├── behaviorTree.js      # 行为树数据转换
+│   ├── nodeTemplates.js     # 节点模板定义
+│   ├── logPlayer.js         # 日志回放引擎
+│   ├── wsViewer.js          # WebSocket 实时查看
+│   └── ui/                  # UI 控制器
+├── examples/                 # 示例文件
+│   ├── sample_tree.json
+│   ├── sample_nodes.json
+│   └── bt_log.jsonl
+└── .github/workflows/        # CI/CD
+    └── deploy.yml
 ```
-
-## 快速开始
-
-### 安装依赖
-
-```bash
-cd behaviortree_editor
-npm install
-```
-
-### 启动开发服务器
-
-```bash
-npm start
-```
-
-然后在浏览器中打开 `http://localhost:3000`
-
-### 或直接打开 HTML 文件
-
-也可以直接在浏览器中打开 `index.html` 文件，无需启动服务器。
-
-## 使用说明
-
-### 1. 创建节点
-
-从左侧节点面板拖拽节点到画布中：
-
-- **组合节点 (紫色)**: 用于控制多个子节点的执行流程
-  - `Sequence`: 顺序执行，全部成功才成功
-  - `Selector`: 选择执行，一个成功即成功
-  - `Parallel`: 并行执行所有子节点
-
-- **动作节点 (蓝色)**: 执行具体动作的叶子节点
-  - `AlwaysSuccess`: 总是返回成功
-  - `AlwaysFailure`: 总是返回失败
-  - `Wait`: 等待指定时间
-
-- **装饰器节点 (橙色)**: 修改子节点行为
-  - `Inverter`: 反转子节点结果
-  - `Repeater`: 重复执行子节点
-  - `Delay`: 延迟执行子节点
-
-### 2. 连接节点
-
-从父节点的输出点（右侧圆点）拖拽到子节点的输入点（左侧圆点）建立连接。
-
-### 3. 导出行为树
-
-点击顶部的 "💾 导出" 按钮，可以导出两种格式：
-
-**行为树结构 (Tree JSON)**:
-```json
-{
-  "root": {
-    "name": "Selector",
-    "type": 0,
-    "status": 3,
-    "children": [...]
-  }
-}
-```
-
-**节点定义 (Nodes JSON)**:
-```json
-{
-  "nodes": [
-    {
-      "id": "Sequence",
-      "type": 0,
-      "ports": null
-    },
-    ...
-  ]
-}
-```
-
-### 4. 导入
-
-- **导入节点定义**: 导入自定义节点库，扩展可用节点类型
-- **导入行为树**: 从 JSON 文件导入已有的行为树结构
-
-### 5. 键盘快捷键
-
-- `Ctrl/Cmd + S`: 导出
-- `Ctrl/Cmd + C`: 复制选中节点
-- `Ctrl/Cmd + V`: 粘贴节点
-- `Delete/Backspace`: 删除选中节点
-- `Escape`: 取消选择
-
-### 6. 自定义节点
-
-点击左侧底部的 "➕ 添加自定义节点" 按钮，可以创建自定义节点：
-
-1. 输入节点名称
-2. 选择节点类型
-3. 可选：添加端口配置（JSON 格式）
-
-示例端口配置：
-```json
-[
-  {
-    "name": "delay",
-    "type_name": "int",
-    "mode": 0
-  }
-]
-```
-
-## 数据格式说明
-
-### 节点类型 (type)
-
-- `0`: 组合节点 (Composite)
-- `1`: 动作节点 (Action)
-- `2`: 装饰器节点 (Decorator)
-
-### 节点状态 (status)
-
-- `0`: 空闲 (Idle)
-- `1`: 运行中 (Running)
-- `2`: 成功 (Success)
-- `3`: 失败 (Failure)
-
-### 端口模式 (mode)
-
-- `0`: 输入端口 (Input)
-- `1`: 输出端口 (Output)
-
-## 示例
-
-在 `examples/` 目录下提供了示例文件：
-
-- `sample_tree.json`: 完整的示例行为树
-- `sample_nodes.json`: 示例节点定义
-
-可以通过 "导入" 功能加载这些示例。
 
 ## 技术栈
 
-- **前端**: HTML5, CSS3, JavaScript (ES6+)
-- **可视化库**: [Drawflow](https://github.com/jerosoler/Drawflow) - 可视化节点编辑器
-- **后端**: Node.js (仅用于开发服务器)
+- **前端**: HTML5 + CSS3 + JavaScript (ES6+)，无需构建工具
+- **可视化**: [Drawflow](https://github.com/jerosoler/Drawflow)
+- **部署**: GitHub Pages（静态站点）
+- **本地服务器**: Node.js（可选，仅用于开发）
 
-## 浏览器支持
+## License
 
-- Chrome/Edge (推荐)
-- Firefox
-- Safari
-- 其他现代浏览器
-
-## 扩展开发
-
-### 添加新的节点模板
-
-编辑 `js/nodeTemplates.js` 文件，在 `initializeDefaultTemplates()` 方法中添加：
-
-```javascript
-this.addTemplate({
-    id: 'MyNewNode',
-    name: 'MyNewNode',
-    type: NodeType.ACTION,
-    description: '我的新节点',
-    icon: '🎯',
-    ports: null
-});
-```
-
-### 自定义样式
-
-修改 `css/main.css` 或 `css/drawflow.custom.css` 来自定义界面样式。
-
-### 扩展行为树逻辑
-
-`js/behaviorTree.js` 包含了行为树与 Drawflow 之间的转换逻辑，可以根据需要扩展。
-
-## 许可证
-
-MIT License
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 更新日志
-
-### v1.0.0 (2024)
-- ✅ 初始版本发布
-- ✅ 基础节点编辑功能
-- ✅ 导入导出支持
-- ✅ 自定义节点创建
-- ✅ 键盘快捷键
-- ✅ 暗色主题界面
-
-## 联系方式
-
-如有问题或建议，请通过 GitHub Issues 联系。
-
----
-
-**Enjoy building behavior trees! 🌲**
+[MIT](LICENSE)
