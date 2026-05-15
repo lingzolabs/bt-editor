@@ -1,0 +1,19 @@
+.github/workflows/deploy.yml
+  s_a1dafc2b01fb3d::t_44087ad6e790ab 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "3457009f24379a01d431721bf63c299ce21e5525",
+  "prompts": {},
+  "sessions": {
+    "s_a1dafc2b01fb3d": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e29b6-1db5-709e-a0ff-f67253f36557",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Albert Lv <altair.albert@gmail.com>"
+    }
+  }
+}
