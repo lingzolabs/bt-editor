@@ -1,0 +1,26 @@
+README.md
+  s_a1dafc2b01fb3d::t_3652157427b842 5,38,43-44
+  s_a1dafc2b01fb3d::t_0dc05821632801 1,3,7,9,11-15,17-21,23-26,28-32,36,40,45,47,50,54-55,57,59-64,66,68-70,72,74,76,79-98,103-106,108,110
+.github/workflows/deploy.yml
+  s_a1dafc2b01fb3d::t_8d0111fb39c1d8 1-36
+js/ui/replay.js
+  s_a1dafc2b01fb3d::t_b0c39550912803 94
+examples/bt_log.jsonl
+  s_a1dafc2b01fb3d::t_366a96ba756e35 1-10483
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "a0dcad3c43c0a22e17c29d026c1951a1d77d5945",
+  "prompts": {},
+  "sessions": {
+    "s_a1dafc2b01fb3d": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e29b6-1db5-709e-a0ff-f67253f36557",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Albert Lv <altair.albert@gmail.com>"
+    }
+  }
+}
